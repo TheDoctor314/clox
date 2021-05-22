@@ -3,12 +3,18 @@
 #include "chunk.h"
 #include "compiler.h"
 #include "debug.h"
+#include "log.h"
 #include "value.h"
 #include "vm.h"
 
 VM vm;
 
 static void reset_stack() { vm.stackTop = vm.stack; }
+static void runtime_err(const char *msg) {
+    size_t inst = vm.ip - vm.chunk->code - 1;
+    int line = vm.chunk->lines[inst];
+    log_error("[line %d] - %s", line, msg);
+}
 
 void initVM() { reset_stack(); }
 void freeVM() {}
@@ -19,11 +25,17 @@ static inline Value read_constant() {
     return vm.chunk->constants.values[read_byte()];
 }
 
-#define BINARY_OP(op)                                                          \
+static inline Value peek(int dist) { return vm.stackTop[-dist - 1]; }
+
+#define BINARY_OP(valueType, op)                                               \
     do {                                                                       \
-        double b = pop();                                                      \
-        double a = pop();                                                      \
-        push(a op b);                                                          \
+        if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                      \
+            runtime_err("Operands must be numbers");                           \
+            return INTERPRET_RUNTIME_ERR;                                      \
+        }                                                                      \
+        double b = AS_NUMBER(pop());                                           \
+        double a = AS_NUMBER(pop());                                           \
+        push(valueType(a op b));                                               \
     } while (false)
 
 static InterpretResult run() {
@@ -48,19 +60,24 @@ static InterpretResult run() {
             break;
         }
         case OP_ADD:
-            BINARY_OP(+);
+            BINARY_OP(NUMBER_VAL, +);
             break;
         case OP_SUBTRACT:
-            BINARY_OP(-);
+            BINARY_OP(NUMBER_VAL, -);
             break;
         case OP_MULTIPLY:
-            BINARY_OP(*);
+            BINARY_OP(NUMBER_VAL, *);
             break;
         case OP_DIVIDE:
-            BINARY_OP(/);
+            BINARY_OP(NUMBER_VAL, /);
             break;
         case OP_NEGATE:
-            push(-pop());
+            if (!IS_NUMBER(peek(0))) {
+                runtime_err("Operand must be a number");
+                return INTERPRET_RUNTIME_ERR;
+            }
+
+            push(NUMBER_VAL(-AS_NUMBER(pop())));
             break;
         case OP_RETURN: {
             printValue(pop());
