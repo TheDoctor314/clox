@@ -26,4 +26,16 @@ void writeValueArray(ValueArray *array, Value val) {
     array->len++;
 }
 
-void printValue(Value val) { printf("%g", AS_NUMBER(val)); }
+void printValue(Value val) {
+    switch (val.type) {
+    case VAL_BOOL:
+        printf(AS_BOOL(val) ? "true" : "false");
+        break;
+    case VAL_NIL:
+        printf("nil");
+        break;
+    case VAL_NUM:
+        printf("%g", AS_NUMBER(val));
+        break;
+    }
+}
