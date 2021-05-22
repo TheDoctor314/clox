@@ -67,6 +67,7 @@ static void number();
 static void grouping();
 static void unary();
 static void binary();
+static void literal();
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
@@ -161,17 +162,17 @@ ParseRule rules[] = {
     [TKN_And] = {NULL, NULL, PREC_NONE},
     [TKN_Class] = {NULL, NULL, PREC_NONE},
     [TKN_Else] = {NULL, NULL, PREC_NONE},
-    [TKN_False] = {NULL, NULL, PREC_NONE},
+    [TKN_False] = {literal, NULL, PREC_NONE},
     [TKN_For] = {NULL, NULL, PREC_NONE},
     [TKN_Fun] = {NULL, NULL, PREC_NONE},
     [TKN_If] = {NULL, NULL, PREC_NONE},
-    [TKN_Nil] = {NULL, NULL, PREC_NONE},
+    [TKN_Nil] = {literal, NULL, PREC_NONE},
     [TKN_Or] = {NULL, NULL, PREC_NONE},
     [TKN_Print] = {NULL, NULL, PREC_NONE},
     [TKN_Return] = {NULL, NULL, PREC_NONE},
     [TKN_Super] = {NULL, NULL, PREC_NONE},
     [TKN_This] = {NULL, NULL, PREC_NONE},
-    [TKN_True] = {NULL, NULL, PREC_NONE},
+    [TKN_True] = {literal, NULL, PREC_NONE},
     [TKN_Var] = {NULL, NULL, PREC_NONE},
     [TKN_While] = {NULL, NULL, PREC_NONE},
     [TKN_Err] = {NULL, NULL, PREC_NONE},
@@ -236,6 +237,22 @@ static void binary() {
         break;
     case TKN_Star:
         emit_byte(OP_MULTIPLY);
+        break;
+    default:
+        return;
+    }
+}
+
+static void literal() {
+    switch (parser.previous.type) {
+    case TKN_False:
+        emit_byte(OP_FALSE);
+        break;
+    case TKN_Nil:
+        emit_byte(OP_NIL);
+        break;
+    case TKN_True:
+        emit_byte(OP_TRUE);
         break;
     default:
         return;
