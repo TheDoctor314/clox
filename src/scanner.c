@@ -209,9 +209,9 @@ static TokenType ident_type() {
         if ((scanner.current - scanner.start) > 1) {
             switch (scanner.start[1]) {
             case 'h':
-                return check_keyword(2, 2, "is", TKN_For);
+                return check_keyword(2, 2, "is", TKN_This);
             case 'r':
-                return check_keyword(2, 2, "ue", TKN_Fun);
+                return check_keyword(2, 2, "ue", TKN_True);
             }
         }
         break;
