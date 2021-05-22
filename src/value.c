@@ -26,4 +26,4 @@ void writeValueArray(ValueArray *array, Value val) {
     array->len++;
 }
 
-void printValue(Value val) { printf("%g", val); }
+void printValue(Value val) { printf("%g", AS_NUMBER(val)); }
