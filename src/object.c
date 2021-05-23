@@ -19,6 +19,10 @@ static ObjString *allocate_string(char *chars, int len) {
     return str;
 }
 
+ObjString *takeString(char *chars, int len) {
+    return allocate_string(chars, len);
+}
+
 ObjString *copyString(const char *chars, int len) {
     char *heap_chars =
         (char *)mem_reallocate(NULL, 0, sizeof(char) * (len + 1));

@@ -1,9 +1,12 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "chunk.h"
 #include "compiler.h"
 #include "debug.h"
 #include "log.h"
+#include "memory.h"
+#include "object.h"
 #include "value.h"
 #include "vm.h"
 
@@ -26,6 +29,7 @@ static inline Value read_constant() {
 }
 
 static inline Value peek(int dist) { return vm.stackTop[-dist - 1]; }
+static void concatenate();
 
 #define BINARY_OP(valueType, op)                                               \
     do {                                                                       \
@@ -80,9 +84,19 @@ static InterpretResult run() {
         case OP_LESS:
             BINARY_OP(BOOL_VAL, <);
             break;
-        case OP_ADD:
-            BINARY_OP(NUMBER_VAL, +);
+        case OP_ADD: {
+            if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+                concatenate();
+            } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+                push(NUMBER_VAL(a + b));
+            } else {
+                runtime_err("Operands must be two numbers or two strings");
+                return INTERPRET_RUNTIME_ERR;
+            }
             break;
+        }
         case OP_SUBTRACT:
             BINARY_OP(NUMBER_VAL, -);
             break;
@@ -140,4 +154,18 @@ void push(Value val) {
 Value pop() {
     vm.stackTop--;
     return *vm.stackTop;
+}
+
+static void concatenate() {
+    ObjString *b = AS_STRING(pop());
+    ObjString *a = AS_STRING(pop());
+
+    int len = b->len + a->len;
+    char *chars = mem_reallocate(NULL, 0, sizeof(char) * (len + 1));
+    memcpy(chars, a->chars, a->len);
+    memcpy(chars + a->len, b->chars, b->len);
+    chars[len] = '\0';
+
+    ObjString *ret = takeString(chars, len);
+    push(OBJ_VAL(ret));
 }

@@ -28,6 +28,7 @@ static inline bool is_obj_type(Value val, ObjType type) {
     return IS_OBJ(val) && AS_OBJ(val)->type == type;
 }
 
+ObjString *takeString(char *chars, int len);
 ObjString *copyString(const char *chars, int len);
 
 void printObject(Value val);
