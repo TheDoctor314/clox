@@ -19,8 +19,11 @@ static void runtime_err(const char *msg) {
     log_error("[line %d] - %s", line, msg);
 }
 
-void initVM() { reset_stack(); }
-void freeVM() {}
+void initVM() {
+    reset_stack();
+    vm.objects = NULL;
+}
+void freeVM() { freeObjects(); }
 
 static inline uint8_t read_byte() { return *vm.ip++; }
 
