@@ -148,14 +148,14 @@ ParseRule rules[] = {
     [TKN_Semicolon] = {NULL, NULL, PREC_NONE},
     [TKN_Slash] = {NULL, binary, PREC_FACTOR},
     [TKN_Star] = {NULL, binary, PREC_FACTOR},
-    [TKN_Bang] = {NULL, NULL, PREC_NONE},
-    [TKN_BangEq] = {NULL, NULL, PREC_NONE},
+    [TKN_Bang] = {unary, NULL, PREC_NONE},
+    [TKN_BangEq] = {NULL, binary, PREC_EQUALITY},
     [TKN_Eq] = {NULL, NULL, PREC_NONE},
-    [TKN_EqEq] = {NULL, NULL, PREC_NONE},
-    [TKN_Greater] = {NULL, NULL, PREC_NONE},
-    [TKN_GreaterEq] = {NULL, NULL, PREC_NONE},
-    [TKN_Less] = {NULL, NULL, PREC_NONE},
-    [TKN_LessEq] = {NULL, NULL, PREC_NONE},
+    [TKN_EqEq] = {NULL, binary, PREC_EQUALITY},
+    [TKN_Greater] = {NULL, binary, PREC_COMP},
+    [TKN_GreaterEq] = {NULL, binary, PREC_COMP},
+    [TKN_Less] = {NULL, binary, PREC_COMP},
+    [TKN_LessEq] = {NULL, binary, PREC_COMP},
     [TKN_Ident] = {NULL, NULL, PREC_NONE},
     [TKN_String] = {NULL, NULL, PREC_NONE},
     [TKN_Number] = {number, NULL, PREC_NONE},
@@ -212,6 +212,9 @@ static void unary() {
         PREC_UNARY); // same precedence to parse nested unary exprs: (!! false)
 
     switch (op_type) {
+    case TKN_Bang:
+        emit_byte(OP_NOT);
+        break;
     case TKN_Minus:
         emit_byte(OP_NEGATE);
         break;
@@ -226,6 +229,24 @@ static void binary() {
     parse_precedence((Precedence)(rule->precedence + 1));
 
     switch (op_type) {
+    case TKN_BangEq:
+        emit_bytes(OP_EQUAL, OP_NOT);
+        break;
+    case TKN_EqEq:
+        emit_byte(OP_EQUAL);
+        break;
+    case TKN_Greater:
+        emit_byte(OP_GREATER);
+        break;
+    case TKN_GreaterEq:
+        emit_bytes(OP_LESS, OP_NOT);
+        break;
+    case TKN_Less:
+        emit_byte(OP_LESS);
+        break;
+    case TKN_LessEq:
+        emit_bytes(OP_GREATER, OP_NOT);
+        break;
     case TKN_Plus:
         emit_byte(OP_ADD);
         break;
