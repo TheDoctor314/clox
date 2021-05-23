@@ -37,6 +37,12 @@ typedef struct {
     Value *values;
 } ValueArray;
 
+// like Ruby: nil and false are falsey, rest are truthy
+static inline bool is_falsey(Value val) {
+    return IS_NIL(val) || (IS_BOOL(val) && !AS_BOOL(val));
+}
+bool values_equal(Value a, Value b);
+
 void initValueArray(ValueArray *array);
 void freeValueArray(ValueArray *array);
 void writeValueArray(ValueArray *array, Value val);
