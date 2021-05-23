@@ -3,10 +3,15 @@
 
 #include "memory.h"
 #include "object.h"
+#include "vm.h"
 
 static Obj *allocate_object(size_t size, ObjType type) {
     Obj *obj = (Obj *)mem_reallocate(NULL, 0, size);
     obj->type = type;
+
+    obj->next = vm.objects;
+    vm.objects = obj;
+
     return obj;
 }
 
