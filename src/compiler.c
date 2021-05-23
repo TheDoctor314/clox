@@ -6,6 +6,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "log.h"
+#include "object.h"
 #include "scanner.h"
 
 #ifdef DEBUG_PRINT_CODE
@@ -68,6 +69,7 @@ static void grouping();
 static void unary();
 static void binary();
 static void literal();
+static void string();
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
@@ -157,7 +159,7 @@ ParseRule rules[] = {
     [TKN_Less] = {NULL, binary, PREC_COMP},
     [TKN_LessEq] = {NULL, binary, PREC_COMP},
     [TKN_Ident] = {NULL, NULL, PREC_NONE},
-    [TKN_String] = {NULL, NULL, PREC_NONE},
+    [TKN_String] = {string, NULL, PREC_NONE},
     [TKN_Number] = {number, NULL, PREC_NONE},
     [TKN_And] = {NULL, NULL, PREC_NONE},
     [TKN_Class] = {NULL, NULL, PREC_NONE},
@@ -278,6 +280,12 @@ static void literal() {
     default:
         return;
     }
+}
+
+static void string() {
+    // trim the quotation marks
+    emit_constant(OBJ_VAL(
+        copyString(parser.previous.start + 1, parser.previous.len - 2)));
 }
 
 static ParseRule *getRule(TokenType type) { return &rules[type]; }
