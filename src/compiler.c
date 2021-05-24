@@ -52,8 +52,9 @@ static void error(const char *msg);
 static void error_at(Token *token, const char *msg);
 
 static void advance();
-static void expression();
 static void must_advance(TokenType type, const char *msg);
+static bool check(TokenType type) { return parser.current.type == type; }
+static bool check_advance(TokenType type);
 
 static inline void emit_byte(uint8_t byte) {
     writeChunk(current_chunk(), byte, parser.previous.line);
@@ -64,12 +65,18 @@ static inline void emit_bytes(uint8_t byte1, uint8_t byte2) {
 }
 
 // token parsing functions
+static void expression();
 static void number();
 static void grouping();
 static void unary();
 static void binary();
 static void literal();
 static void string();
+
+// statement parsing
+static void declaration();
+static void statement();
+static void printStatement();
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
@@ -82,8 +89,10 @@ bool compile(const char *src, Chunk *chunk) {
     parser.panicMode = false;
 
     advance();
-    expression();
-    must_advance(TKN_EOF, "Expect end of expression");
+    while (!check_advance(TKN_EOF)) {
+        declaration();
+    }
+
     emit_byte(OP_RETURN);
 
     if (!parser.hadErr) {
@@ -112,6 +121,14 @@ static void must_advance(TokenType type, const char *msg) {
     }
 
     error_at_current(msg);
+}
+
+static bool check_advance(TokenType type) {
+    if (!check(type))
+        return false;
+
+    advance();
+    return true;
 }
 
 static void error_at_current(const char *msg) {
@@ -304,6 +321,20 @@ static void parse_precedence(Precedence prec) {
         ParseFn infix_rule = getRule(parser.previous.type)->infix;
         infix_rule();
     }
+}
+
+static void declaration() { statement(); }
+
+static void statement() {
+    if (check_advance(TKN_Print)) {
+        printStatement();
+    }
+}
+
+static void printStatement() {
+    expression();
+    must_advance(TKN_Semicolon, "Expect ';' after value");
+    emit_byte(OP_PRINT);
 }
 
 /* maybe put it in a function to print the tokens?
