@@ -50,6 +50,7 @@ static Chunk *current_chunk() { return compiling_chunk; }
 static void error_at_current(const char *msg);
 static void error(const char *msg);
 static void error_at(Token *token, const char *msg);
+static void synchronize();
 
 static void advance();
 static void must_advance(TokenType type, const char *msg);
@@ -75,6 +76,7 @@ static void string();
 
 // statement parsing
 static void declaration();
+static void varDeclaration();
 static void statement();
 static void printStatement();
 static void expressionStatement();
@@ -324,7 +326,43 @@ static void parse_precedence(Precedence prec) {
     }
 }
 
-static void declaration() { statement(); }
+static uint8_t identifier_constant(Token *name) {
+    return make_constant(OBJ_VAL(copyString(name->start, name->len)));
+}
+
+static uint8_t parse_variable(const char *msg) {
+    must_advance(TKN_Ident, msg);
+
+    return identifier_constant(&parser.previous);
+}
+
+static void define_variable(uint8_t global) {
+    emit_bytes(OP_DEFINE_GLOBAL, global);
+}
+
+static void declaration() {
+    if (check_advance(TKN_Var)) {
+        varDeclaration();
+    } else {
+        statement();
+    }
+
+    if (parser.panicMode)
+        synchronize();
+}
+
+static void varDeclaration() {
+    uint8_t global = parse_variable("Expect variable name");
+
+    if (check_advance(TKN_Eq)) {
+        expression();
+    } else {
+        emit_byte(OP_NIL);
+    }
+
+    must_advance(TKN_Semicolon, "Expect ';' after variable declaration");
+    define_variable(global);
+}
 
 static void statement() {
     if (check_advance(TKN_Print)) {
@@ -344,6 +382,34 @@ static void expressionStatement() {
     expression();
     must_advance(TKN_Semicolon, "Expect ';' after value");
     emit_byte(OP_POP);
+}
+
+/* if we get a parse error, we skip tokens indiscriminately
+ * until we reach the boundary of the next statement.
+ * We find the boundary if the previous token was a semicolon
+ * or if the current token is one used to start a statement.*/
+static void synchronize() {
+    parser.panicMode = false;
+
+    while (!check(TKN_EOF)) {
+        if (parser.previous.type == TKN_Semicolon)
+            return;
+
+        switch (parser.current.type) {
+        case TKN_Class:
+        case TKN_Fun:
+        case TKN_Var:
+        case TKN_For:
+        case TKN_If:
+        case TKN_While:
+        case TKN_Print:
+        case TKN_Return:
+            return;
+        default:;
+        }
+
+        advance();
+    }
 }
 
 /* maybe put it in a function to print the tokens?

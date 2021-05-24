@@ -40,6 +40,8 @@ static inline Value read_constant() {
 static inline Value peek(int dist) { return vm.stackTop[-dist - 1]; }
 static void concatenate();
 
+#define READ_STRING() AS_STRING(read_constant())
+
 #define BINARY_OP(valueType, op)                                               \
     do {                                                                       \
         if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                      \
@@ -84,6 +86,12 @@ static InterpretResult run() {
         case OP_POP:
             pop();
             break;
+        case OP_DEFINE_GLOBAL: {
+            ObjString *name = READ_STRING();
+            tableSet(&vm.globals, name, peek(0));
+            pop();
+            break;
+        }
         case OP_EQUAL: {
             Value b = pop();
             Value a = pop();
@@ -142,6 +150,7 @@ static InterpretResult run() {
 }
 
 #undef BINARY_OP
+#undef READ_STRING
 
 InterpretResult interpret(const char *src) {
     Chunk chunk;
