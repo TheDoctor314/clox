@@ -73,6 +73,7 @@ static void unary();
 static void binary();
 static void literal();
 static void string();
+static void variable();
 
 // statement parsing
 static void declaration();
@@ -178,7 +179,7 @@ ParseRule rules[] = {
     [TKN_GreaterEq] = {NULL, binary, PREC_COMP},
     [TKN_Less] = {NULL, binary, PREC_COMP},
     [TKN_LessEq] = {NULL, binary, PREC_COMP},
-    [TKN_Ident] = {NULL, NULL, PREC_NONE},
+    [TKN_Ident] = {variable, NULL, PREC_NONE},
     [TKN_String] = {string, NULL, PREC_NONE},
     [TKN_Number] = {number, NULL, PREC_NONE},
     [TKN_And] = {NULL, NULL, PREC_NONE},
@@ -308,6 +309,15 @@ static void string() {
         copyString(parser.previous.start + 1, parser.previous.len - 2)));
 }
 
+static uint8_t identifier_constant(Token *name) {
+    return make_constant(OBJ_VAL(copyString(name->start, name->len)));
+}
+static void named_variable(Token name) {
+    uint8_t arg = identifier_constant(&name);
+    emit_bytes(OP_GET_GLOBAL, arg);
+}
+static void variable() { named_variable(parser.previous); }
+
 static ParseRule *getRule(TokenType type) { return &rules[type]; }
 static void parse_precedence(Precedence prec) {
     advance();
@@ -324,10 +334,6 @@ static void parse_precedence(Precedence prec) {
         ParseFn infix_rule = getRule(parser.previous.type)->infix;
         infix_rule();
     }
-}
-
-static uint8_t identifier_constant(Token *name) {
-    return make_constant(OBJ_VAL(copyString(name->start, name->len)));
 }
 
 static uint8_t parse_variable(const char *msg) {
