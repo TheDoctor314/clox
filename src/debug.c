@@ -6,7 +6,7 @@
 void disassembleChunk(Chunk *chunk, const char *name) {
     printf("== %s ==\n", name);
 
-    for (int offset = 0; offset < chunk->len;) {
+    for (size_t offset = 0; offset < chunk->len;) {
         offset = disassembleInstruction(chunk, offset);
     }
 }
@@ -42,6 +42,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
         return simpleInst("OP_TRUE", offset);
     case OP_FALSE:
         return simpleInst("OP_FALSE", offset);
+    case OP_POP:
+        return simpleInst("OP_POP", offset);
     case OP_EQUAL:
         return simpleInst("OP_EQUAL", offset);
     case OP_GREATER:
