@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -13,10 +14,17 @@
 VM vm;
 
 static void reset_stack() { vm.stackTop = vm.stack; }
-static void runtime_err(const char *msg) {
+static void runtime_err(const char *msg, ...) {
     size_t inst = vm.ip - vm.chunk->code - 1;
     int line = vm.chunk->lines[inst];
-    log_error("[line %d] - %s", line, msg);
+
+    char buf[1024] = {0};
+    va_list args;
+    va_start(args, msg);
+    vsnprintf(buf, 1024, msg, args);
+    va_end(args);
+
+    log_error("[line %d] - %s", line, buf);
 }
 
 void initVM() {
