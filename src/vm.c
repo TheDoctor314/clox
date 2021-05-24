@@ -22,8 +22,12 @@ static void runtime_err(const char *msg) {
 void initVM() {
     reset_stack();
     vm.objects = NULL;
+    initTable(&vm.strings);
 }
-void freeVM() { freeObjects(); }
+void freeVM() {
+    freeObjects();
+    freeTable(&vm.strings);
+}
 
 static inline uint8_t read_byte() { return *vm.ip++; }
 
