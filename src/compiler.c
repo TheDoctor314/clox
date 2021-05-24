@@ -77,6 +77,7 @@ static void string();
 static void declaration();
 static void statement();
 static void printStatement();
+static void expressionStatement();
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
@@ -115,7 +116,7 @@ static void advance() {
 }
 
 static void must_advance(TokenType type, const char *msg) {
-    if (parser.current.type == type) {
+    if (check(type)) {
         advance();
         return;
     }
@@ -328,6 +329,8 @@ static void declaration() { statement(); }
 static void statement() {
     if (check_advance(TKN_Print)) {
         printStatement();
+    } else {
+        expressionStatement();
     }
 }
 
@@ -335,6 +338,12 @@ static void printStatement() {
     expression();
     must_advance(TKN_Semicolon, "Expect ';' after value");
     emit_byte(OP_PRINT);
+}
+
+static void expressionStatement() {
+    expression();
+    must_advance(TKN_Semicolon, "Expect ';' after value");
+    emit_byte(OP_POP);
 }
 
 /* maybe put it in a function to print the tokens?
