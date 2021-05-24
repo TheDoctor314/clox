@@ -23,10 +23,12 @@ void initVM() {
     reset_stack();
     vm.objects = NULL;
     initTable(&vm.strings);
+    initTable(&vm.globals);
 }
 void freeVM() {
     freeObjects();
     freeTable(&vm.strings);
+    freeTable(&vm.globals);
 }
 
 static inline uint8_t read_byte() { return *vm.ip++; }
