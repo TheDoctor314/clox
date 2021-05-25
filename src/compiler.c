@@ -77,6 +77,12 @@ static inline void emit_bytes(uint8_t byte1, uint8_t byte2) {
     emit_byte(byte1);
     emit_byte(byte2);
 }
+static bool identifiers_equal(Token *a, Token *b) {
+    if (a->len != b->len)
+        return false;
+
+    return memcmp(a->start, b->start, a->len) == 0;
+}
 
 // token parsing functions
 static void expression();
@@ -356,8 +362,7 @@ static void declare_variable() {
         if (local->depth != -1 && local->depth < current->scopeDepth)
             break;
 
-        if ((name->len == local->name.len) &&
-            (memcmp(name->start, local->name.start, name->len) == 0)) {
+        if (identifiers_equal(name, &local->name)) {
             error("Variable already defined with this name in this scope");
         }
     }
