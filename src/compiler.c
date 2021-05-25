@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "chunk.h"
 #include "common.h"
@@ -42,7 +43,19 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
+typedef struct {
+    Token name;
+    int depth;
+} Local;
+
+typedef struct {
+    Local locals[UINT8_MAX + 1];
+    int localCount;
+    int scopeDepth;
+} Compiler;
+
 Parser parser;
+Compiler *current = NULL;
 Chunk *compiling_chunk = NULL;
 
 static Chunk *current_chunk() { return compiling_chunk; }
@@ -81,12 +94,17 @@ static void varDeclaration();
 static void statement();
 static void printStatement();
 static void expressionStatement();
+static void block();
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
 
+static void initCompiler(Compiler *c);
+
 bool compile(const char *src, Chunk *chunk) {
     initScanner(src);
+    Compiler compiler;
+    initCompiler(&compiler);
     compiling_chunk = chunk;
 
     parser.hadErr = false;
@@ -104,6 +122,12 @@ bool compile(const char *src, Chunk *chunk) {
     }
 
     return !parser.hadErr;
+}
+
+static void initCompiler(Compiler *c) {
+    c->localCount = 0;
+    c->scopeDepth = 0;
+    current = c;
 }
 
 static void advance() {
