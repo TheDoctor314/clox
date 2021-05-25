@@ -336,6 +336,34 @@ static void string(bool canAssign) {
 static uint8_t identifier_constant(Token *name) {
     return make_constant(OBJ_VAL(copyString(name->start, name->len)));
 }
+static void add_local(Token name) {
+    if (current->localCount == UINT8_MAX + 1) {
+        error("Too many local variables in function");
+        return;
+    }
+
+    Local *local = &current->locals[current->localCount++];
+    local->name = name;
+    local->depth = current->scopeDepth;
+}
+static void declare_variable() {
+    if (current->scopeDepth == 0)
+        return;
+
+    Token *name = &parser.previous;
+    for (int i = current->localCount; i >= 0; i++) {
+        Local *local = &current->locals[i];
+        if (local->depth != -1 && local->depth < current->scopeDepth)
+            break;
+
+        if ((name->len == local->name.len) &&
+            (memcmp(name->start, local->name.start, name->len) == 0)) {
+            error("Variable already defined with this name in this scope");
+        }
+    }
+
+    add_local(*name);
+}
 static void named_variable(Token name, bool canAssign) {
     uint8_t arg = identifier_constant(&name);
 
@@ -376,10 +404,17 @@ static void parse_precedence(Precedence prec) {
 static uint8_t parse_variable(const char *msg) {
     must_advance(TKN_Ident, msg);
 
+    declare_variable();
+    if (current->scopeDepth > 0)
+        return 0;
+
     return identifier_constant(&parser.previous);
 }
 
 static void define_variable(uint8_t global) {
+    if (current->scopeDepth > 0)
+        return;
+
     emit_bytes(OP_DEFINE_GLOBAL, global);
 }
 
@@ -407,9 +442,25 @@ static void varDeclaration() {
     define_variable(global);
 }
 
+static void begin_scope() { current->scopeDepth++; }
+static void end_scope() {
+    current->scopeDepth--;
+
+    while (current->localCount > 0 &&
+           current->locals[current->localCount - 1].depth >
+               current->scopeDepth) {
+        emit_byte(OP_POP);
+        current->localCount--;
+    }
+}
+
 static void statement() {
     if (check_advance(TKN_Print)) {
         printStatement();
+    } else if (check_advance(TKN_LBrace)) {
+        begin_scope();
+        block();
+        end_scope();
     } else {
         expressionStatement();
     }
@@ -425,6 +476,14 @@ static void expressionStatement() {
     expression();
     must_advance(TKN_Semicolon, "Expect ';' after value");
     emit_byte(OP_POP);
+}
+
+static void block() {
+    while (!check(TKN_RBrace) && !check(TKN_EOF)) {
+        declaration();
+    }
+
+    must_advance(TKN_RBrace, "Expect '}' after block");
 }
 
 /* if we get a parse error, we skip tokens indiscriminately
