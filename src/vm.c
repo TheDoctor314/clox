@@ -104,6 +104,15 @@ static InterpretResult run() {
             push(val);
             break;
         }
+        case OP_SET_GLOBAL: {
+            ObjString *name = READ_STRING();
+            if (tableSet(&vm.globals, name, peek(0))) {
+                tableDelete(&vm.globals, name);
+                runtime_err("Undefined variable '%s'", name->chars);
+                return INTERPRET_RUNTIME_ERR;
+            }
+            break;
+        }
         case OP_DEFINE_GLOBAL: {
             ObjString *name = READ_STRING();
             tableSet(&vm.globals, name, peek(0));
