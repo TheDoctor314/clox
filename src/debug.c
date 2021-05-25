@@ -23,6 +23,11 @@ static int simpleInst(const char *name, int offset) {
     puts(name);
     return offset + 1;
 }
+static int byteInst(const char *name, Chunk *chunk, int offset) {
+    uint8_t slot = chunk->code[offset + 1];
+    printf("%-16s %d\n", name, slot);
+    return offset + 2;
+}
 
 int disassembleInstruction(Chunk *chunk, int offset) {
     printf("%04d ", offset);
@@ -44,6 +49,10 @@ int disassembleInstruction(Chunk *chunk, int offset) {
         return simpleInst("OP_FALSE", offset);
     case OP_POP:
         return simpleInst("OP_POP", offset);
+    case OP_GET_LOCAL:
+        return byteInst("OP_GET_GLOBAL", chunk, offset);
+    case OP_SET_LOCAL:
+        return byteInst("OP_SET_GLOBAL", chunk, offset);
     case OP_GET_GLOBAL:
         return constInst("OP_GET_GLOBAL", chunk, offset);
     case OP_SET_GLOBAL:
