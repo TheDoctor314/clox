@@ -84,6 +84,8 @@ static bool identifiers_equal(Token *a, Token *b) {
     return memcmp(a->start, b->start, a->len) == 0;
 }
 
+static int resolve_local(Compiler *compiler, Token *name);
+
 // token parsing functions
 static void expression();
 static void number(bool);
@@ -370,13 +372,22 @@ static void declare_variable() {
     add_local(*name);
 }
 static void named_variable(Token name, bool canAssign) {
-    uint8_t arg = identifier_constant(&name);
+    uint8_t getOp, setOp;
+    int arg = resolve_local(current, &name);
+    if (arg != -1) {
+        getOp = OP_GET_LOCAL;
+        setOp = OP_SET_LOCAL;
+    } else {
+        arg = identifier_constant(&name);
+        getOp = OP_GET_GLOBAL;
+        setOp = OP_SET_GLOBAL;
+    }
 
     if (canAssign && check_advance(TKN_Eq)) {
         expression();
-        emit_bytes(OP_SET_GLOBAL, arg);
+        emit_bytes(setOp, arg);
     } else {
-        emit_bytes(OP_GET_GLOBAL, arg);
+        emit_bytes(getOp, arg);
     }
 }
 static void variable(bool canAssign) {
@@ -517,6 +528,16 @@ static void synchronize() {
 
         advance();
     }
+}
+
+static int resolve_local(Compiler *compiler, Token *name) {
+    for (int i = compiler->localCount - 1; i >= 0; i--) {
+        Local *local = &compiler->locals[i];
+        if (identifiers_equal(name, &local->name))
+            return i;
+    }
+
+    return -1;
 }
 
 /* maybe put it in a function to print the tokens?
