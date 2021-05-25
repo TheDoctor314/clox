@@ -352,7 +352,7 @@ static void add_local(Token name) {
 
     Local *local = &current->locals[current->localCount++];
     local->name = name;
-    local->depth = current->scopeDepth;
+    local->depth = -1; // sentinel for uninitialized state
 }
 static void declare_variable() {
     if (current->scopeDepth == 0)
@@ -427,9 +427,14 @@ static uint8_t parse_variable(const char *msg) {
     return identifier_constant(&parser.previous);
 }
 
+static void mark_init() {
+    current->locals[current->localCount - 1].depth = current->scopeDepth;
+}
 static void define_variable(uint8_t global) {
-    if (current->scopeDepth > 0)
+    if (current->scopeDepth > 0) {
+        mark_init();
         return;
+    }
 
     emit_bytes(OP_DEFINE_GLOBAL, global);
 }
@@ -533,8 +538,12 @@ static void synchronize() {
 static int resolve_local(Compiler *compiler, Token *name) {
     for (int i = compiler->localCount - 1; i >= 0; i--) {
         Local *local = &compiler->locals[i];
-        if (identifiers_equal(name, &local->name))
+        if (identifiers_equal(name, &local->name)) {
+            if (local->depth == -1) {
+                error("Cannot read variable in its own initializer");
+            }
             return i;
+        }
     }
 
     return -1;
