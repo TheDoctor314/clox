@@ -83,6 +83,8 @@ static bool identifiers_equal(Token *a, Token *b) {
 
     return memcmp(a->start, b->start, a->len) == 0;
 }
+static int emit_jump(uint8_t inst);
+static void patch_jump(int offset);
 
 static int resolve_local(Compiler *compiler, Token *name);
 
@@ -95,6 +97,8 @@ static void binary(bool);
 static void literal(bool);
 static void string(bool);
 static void variable(bool);
+static void logical_and(bool);
+static void logical_or(bool);
 
 // statement parsing
 static void declaration();
@@ -215,7 +219,7 @@ ParseRule rules[] = {
     [TKN_Ident] = {variable, NULL, PREC_NONE},
     [TKN_String] = {string, NULL, PREC_NONE},
     [TKN_Number] = {number, NULL, PREC_NONE},
-    [TKN_And] = {NULL, NULL, PREC_NONE},
+    [TKN_And] = {NULL, logical_and, PREC_AND},
     [TKN_Class] = {NULL, NULL, PREC_NONE},
     [TKN_Else] = {NULL, NULL, PREC_NONE},
     [TKN_False] = {literal, NULL, PREC_NONE},
@@ -223,7 +227,7 @@ ParseRule rules[] = {
     [TKN_Fun] = {NULL, NULL, PREC_NONE},
     [TKN_If] = {NULL, NULL, PREC_NONE},
     [TKN_Nil] = {literal, NULL, PREC_NONE},
-    [TKN_Or] = {NULL, NULL, PREC_NONE},
+    [TKN_Or] = {NULL, logical_or, PREC_OR},
     [TKN_Print] = {NULL, NULL, PREC_NONE},
     [TKN_Return] = {NULL, NULL, PREC_NONE},
     [TKN_Super] = {NULL, NULL, PREC_NONE},
@@ -340,6 +344,25 @@ static void string(bool canAssign) {
     // trim the quotation marks
     emit_constant(OBJ_VAL(
         copyString(parser.previous.start + 1, parser.previous.len - 2)));
+}
+
+static void logical_and(bool canAssign) {
+    int end_jump = emit_jump(OP_JUMP_IF_FALSE);
+
+    emit_byte(OP_POP);
+    parse_precedence(PREC_AND);
+
+    patch_jump(end_jump);
+}
+static void logical_or(bool canAssign) {
+    int else_jump = emit_jump(OP_JUMP_IF_FALSE);
+    int end_jump = emit_jump(OP_JUMP);
+
+    patch_jump(else_jump);
+    emit_byte(OP_POP);
+
+    parse_precedence(PREC_OR);
+    patch_jump(end_jump);
 }
 
 static uint8_t identifier_constant(Token *name) {
