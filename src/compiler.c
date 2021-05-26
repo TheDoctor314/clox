@@ -108,6 +108,7 @@ static void printStatement();
 static void expressionStatement();
 static void block();
 static void ifStatement();
+static void whileStatement();
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
@@ -502,6 +503,8 @@ static void end_scope() {
 static void statement() {
     if (check_advance(TKN_Print)) {
         printStatement();
+    } else if (check_advance(TKN_While)) {
+        whileStatement();
     } else if (check_advance(TKN_If)) {
         ifStatement();
     } else if (check_advance(TKN_LBrace)) {
@@ -571,6 +574,33 @@ static void ifStatement() {
         statement();
 
     patch_jump(else_jump);
+}
+
+static void emit_loop(int loopStart) {
+    emit_byte(OP_LOOP);
+
+    // calculating jump
+    int jump = current_chunk()->len - loopStart + 2;
+    if (jump > UINT16_MAX)
+        error("Loop body too large");
+
+    emit_bytes((jump >> 8) & 0xff, jump & 0xff);
+}
+static void whileStatement() {
+    int loopStart = current_chunk()->len;
+    must_advance(TKN_LParen, "Expect '(' after 'while'");
+    expression();
+    must_advance(TKN_RParen, "Expect ')' after condition");
+
+    int exit_jump = emit_jump(OP_JUMP_IF_FALSE);
+
+    emit_byte(OP_POP);
+    statement();
+
+    emit_loop(loopStart);
+
+    patch_jump(exit_jump);
+    emit_byte(OP_POP);
 }
 
 /* if we get a parse error, we skip tokens indiscriminately
