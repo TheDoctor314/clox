@@ -103,6 +103,7 @@ static void statement();
 static void printStatement();
 static void expressionStatement();
 static void block();
+static void ifStatement();
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
@@ -478,6 +479,8 @@ static void end_scope() {
 static void statement() {
     if (check_advance(TKN_Print)) {
         printStatement();
+    } else if (check_advance(TKN_If)) {
+        ifStatement();
     } else if (check_advance(TKN_LBrace)) {
         begin_scope();
         block();
@@ -505,6 +508,37 @@ static void block() {
     }
 
     must_advance(TKN_RBrace, "Expect '}' after block");
+}
+
+static int emit_jump(uint8_t inst) {
+    emit_byte(inst);
+    // two byte jump offset
+    emit_byte(0xff);
+    emit_byte(0xff);
+
+    return current_chunk()->len - 2;
+}
+static void patch_jump(int offset) {
+    // -2 to compensate for the two byte offset itself
+    int jump = current_chunk()->len - offset - 2;
+
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over");
+    }
+
+    // higher byte stored first
+    current_chunk()->code[offset] = (jump >> 8) & 0xff;
+    current_chunk()->code[offset + 1] = jump & 0xff;
+}
+static void ifStatement() {
+    must_advance(TKN_LParen, "Expect '(' after 'if'");
+    expression();
+    must_advance(TKN_RParen, "EXpect ')' after condition");
+
+    int then_jump = emit_jump(OP_JUMP_IF_FALSE);
+    statement();
+
+    patch_jump(then_jump);
 }
 
 /* if we get a parse error, we skip tokens indiscriminately
