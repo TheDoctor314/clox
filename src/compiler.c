@@ -536,9 +536,18 @@ static void ifStatement() {
     must_advance(TKN_RParen, "EXpect ')' after condition");
 
     int then_jump = emit_jump(OP_JUMP_IF_FALSE);
+    emit_byte(OP_POP);
     statement();
 
+    int else_jump = emit_jump(OP_JUMP);
+
     patch_jump(then_jump);
+    emit_byte(OP_POP);
+
+    if (check_advance(TKN_Else))
+        statement();
+
+    patch_jump(else_jump);
 }
 
 /* if we get a parse error, we skip tokens indiscriminately
