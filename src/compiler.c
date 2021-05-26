@@ -176,7 +176,7 @@ static bool check_advance(TokenType type) {
 static void error_at_current(const char *msg) {
     error_at(&parser.current, msg);
 }
-static void error(const char *msg) { error_at(&parser.current, msg); }
+static void error(const char *msg) { error_at(&parser.previous, msg); }
 
 #define MAX_LEN 1024
 static void error_at(Token *token, const char *msg) {
