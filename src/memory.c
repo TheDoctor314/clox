@@ -31,8 +31,7 @@ static void free_object(Obj *object) {
     }
     case OBJ_FUNC: {
         ObjFunction *func = (ObjFunction *)object;
-        freeChunk(func->chunk);
-        free_object((Obj *)func->name);
+        freeChunk(&func->chunk);
         FREE(ObjFunction, object);
     }
     }
