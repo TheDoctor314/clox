@@ -45,6 +45,8 @@ void freeVM() {
 }
 
 static inline Value peek(int dist) { return vm.stackTop[-dist - 1]; }
+static bool call(ObjFunction *func, int arg_count);
+static bool call_value(Value callee, int arg_count);
 static void concatenate();
 
 #define READ_BYTE() (*frame->ip++)
@@ -201,6 +203,14 @@ static InterpretResult run() {
             frame->ip -= offset;
             break;
         }
+        case OP_CALL: {
+            int arg_count = READ_BYTE();
+            if (!call_value(peek(arg_count), arg_count)) {
+                return INTERPRET_RUNTIME_ERR;
+            }
+            frame = &vm.frames[vm.frameCount - 1];
+            break;
+        }
         case OP_RETURN: {
             // Exit interpreter
             return INTERPRET_OK;
@@ -211,6 +221,9 @@ static InterpretResult run() {
 
 #undef BINARY_OP
 #undef READ_STRING
+#undef READ_BYTE
+#undef READ_SHORT
+#undef READ_CONSTANT
 
 InterpretResult interpret(const char *src) {
     ObjFunction *func = compile(src);
@@ -218,10 +231,7 @@ InterpretResult interpret(const char *src) {
         return INTERPRET_COMPILE_ERR;
 
     push(OBJ_VAL(func));
-    CallFrame *frame = &vm.frames[vm.frameCount++];
-    frame->function = func;
-    frame->ip = func->chunk.code;
-    frame->slots = vm.stack;
+    call(func, 0);
 
     return run();
 }
@@ -248,4 +258,37 @@ static void concatenate() {
 
     ObjString *ret = takeString(chars, len);
     push(OBJ_VAL(ret));
+}
+
+static bool call(ObjFunction *func, int arg_count) {
+    if (arg_count != func->arity) {
+        runtime_err("Expected %d arguments, got %d", func->arity, arg_count);
+        return false;
+    }
+
+    if (vm.frameCount == FRAMES_MAX) {
+        runtime_err("Stack overflow");
+        return false;
+    }
+
+    CallFrame *frame = &vm.frames[vm.frameCount++];
+    frame->function = func;
+    frame->ip = func->chunk.code;
+    frame->slots = vm.stackTop - arg_count - 1;
+
+    return true;
+}
+
+static bool call_value(Value callee, int arg_count) {
+    if (IS_OBJ(callee)) {
+        switch (OBJ_TYPE(callee)) {
+        case OBJ_FUNC:
+            return call(AS_FUNC(callee), arg_count);
+        default:
+            break; // do nothing; non-callable
+        }
+    }
+
+    runtime_err("Can only call functions and classes");
+    return false;
 }
