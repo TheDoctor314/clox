@@ -48,7 +48,15 @@ typedef struct {
     int depth;
 } Local;
 
+typedef enum {
+    TYPE_FUNC,
+    TYPE_SCRIPT,
+} FuncType;
+
 typedef struct {
+    ObjFunction *function;
+    FuncType type;
+
     Local locals[UINT8_MAX + 1];
     int localCount;
     int scopeDepth;
@@ -58,7 +66,7 @@ Parser parser;
 Compiler *current = NULL;
 Chunk *compiling_chunk = NULL;
 
-static Chunk *current_chunk() { return compiling_chunk; }
+static Chunk *current_chunk() { return current->function->chunk; }
 
 static void error_at_current(const char *msg);
 static void error(const char *msg);
@@ -114,13 +122,13 @@ static void forStatement();
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
 
-static void initCompiler(Compiler *c);
+static void initCompiler(Compiler *c, FuncType type);
+static ObjFunction *endCompiler();
 
-bool compile(const char *src, Chunk *chunk) {
+ObjFunction *compile(const char *src) {
     initScanner(src);
     Compiler compiler;
-    initCompiler(&compiler);
-    compiling_chunk = chunk;
+    initCompiler(&compiler, TYPE_SCRIPT);
 
     parser.hadErr = false;
     parser.panicMode = false;
@@ -130,19 +138,36 @@ bool compile(const char *src, Chunk *chunk) {
         declaration();
     }
 
-    emit_byte(OP_RETURN);
-
-    if (!parser.hadErr) {
-        disassembleChunk(chunk, "code");
-    }
-
-    return !parser.hadErr;
+    ObjFunction *func = endCompiler();
+    return parser.hadErr ? NULL : func;
 }
 
-static void initCompiler(Compiler *c) {
+static void initCompiler(Compiler *c, FuncType type) {
+    c->function = NULL;
+    c->type = type;
     c->localCount = 0;
     c->scopeDepth = 0;
+    c->function = newFunction();
     current = c;
+
+    Local *local = &current->locals[current->localCount++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.len = 0;
+}
+
+static ObjFunction *endCompiler() {
+    emit_byte(OP_RETURN);
+    ObjFunction *func = current->function;
+
+#ifdef DEBUG_PRINT_CODE
+    if (!parser.hadErr) {
+        disassembleChunk(current_chunk(),
+                         func->name != NULL ? func->name->chars : "<script>");
+    }
+#endif
+
+    return func;
 }
 
 static void advance() {
