@@ -108,6 +108,7 @@ static void string(bool);
 static void variable(bool);
 static void logical_and(bool);
 static void logical_or(bool);
+static void call(bool);
 
 // statement parsing
 static void declaration();
@@ -235,7 +236,7 @@ static void error_at(Token *token, const char *msg) {
 #undef MAX_LEN
 
 ParseRule rules[] = {
-    [TKN_LParen] = {grouping, NULL, PREC_NONE},
+    [TKN_LParen] = {grouping, call, PREC_CALL},
     [TKN_RParen] = {NULL, NULL, PREC_NONE},
     [TKN_LBrace] = {NULL, NULL, PREC_NONE},
     [TKN_RBrace] = {NULL, NULL, PREC_NONE},
@@ -401,6 +402,26 @@ static void logical_or(bool canAssign) {
 
     parse_precedence(PREC_OR);
     patch_jump(end_jump);
+}
+
+static uint8_t arg_list() {
+    uint8_t arg_count = 0;
+    if (!check(TKN_RParen)) {
+        do {
+            expression();
+            if (arg_count == 255) {
+                error("Cannot have more than 255 arguments");
+            }
+            arg_count++;
+        } while (check_advance(TKN_Comma));
+    }
+
+    must_advance(TKN_RParen, "Expect ')' after arguments");
+    return arg_count;
+}
+static void call(bool canAssign) {
+    uint8_t arg_count = arg_list();
+    emit_bytes(OP_CALL, arg_count);
 }
 
 static uint8_t identifier_constant(Token *name) {
