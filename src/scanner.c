@@ -69,6 +69,8 @@ Token scanToken() {
         return make_token(TKN_RBrace);
     case ';':
         return make_token(TKN_Semicolon);
+    case ',':
+        return make_token(TKN_Comma);
     case '.':
         return make_token(TKN_Dot);
     case '-':
@@ -95,7 +97,7 @@ Token scanToken() {
 }
 
 static Token err_token(const char *msg) {
-    Token token = {.type = TKN_EOF,
+    Token token = {.type = TKN_Err,
                    .start = msg,
                    .len = (int)strlen(msg),
                    .line = scanner.line};
