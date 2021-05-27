@@ -48,7 +48,7 @@ ObjFunction *newFunction() {
 
     func->arity = 0;
     func->name = NULL;
-    initChunk(func->chunk);
+    initChunk(&func->chunk);
 
     return func;
 }

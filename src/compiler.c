@@ -66,7 +66,7 @@ Parser parser;
 Compiler *current = NULL;
 Chunk *compiling_chunk = NULL;
 
-static Chunk *current_chunk() { return current->function->chunk; }
+static Chunk *current_chunk() { return &current->function->chunk; }
 
 static void error_at_current(const char *msg);
 static void error(const char *msg);
