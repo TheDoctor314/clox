@@ -53,7 +53,8 @@ typedef enum {
     TYPE_SCRIPT,
 } FuncType;
 
-typedef struct {
+typedef struct Compiler {
+    struct Compiler *enclosing;
     ObjFunction *function;
     FuncType type;
 
@@ -111,6 +112,7 @@ static void logical_or(bool);
 // statement parsing
 static void declaration();
 static void varDeclaration();
+static void funDeclaration();
 static void statement();
 static void printStatement();
 static void expressionStatement();
@@ -118,6 +120,8 @@ static void block();
 static void ifStatement();
 static void whileStatement();
 static void forStatement();
+
+static void function(FuncType type);
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
@@ -143,12 +147,18 @@ ObjFunction *compile(const char *src) {
 }
 
 static void initCompiler(Compiler *c, FuncType type) {
+    c->enclosing = current;
     c->function = NULL;
     c->type = type;
     c->localCount = 0;
     c->scopeDepth = 0;
     c->function = newFunction();
     current = c;
+
+    if (type != TYPE_SCRIPT) {
+        current->function->name =
+            copyString(parser.previous.start, parser.previous.len);
+    }
 
     Local *local = &current->locals[current->localCount++];
     local->depth = 0;
@@ -167,6 +177,7 @@ static ObjFunction *endCompiler() {
     }
 #endif
 
+    current = current->enclosing;
     return func;
 }
 
@@ -479,6 +490,9 @@ static uint8_t parse_variable(const char *msg) {
 }
 
 static void mark_init() {
+    if (current->scopeDepth == 0)
+        return;
+
     current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 static void define_variable(uint8_t global) {
@@ -493,6 +507,8 @@ static void define_variable(uint8_t global) {
 static void declaration() {
     if (check_advance(TKN_Var)) {
         varDeclaration();
+    } else if (check_advance(TKN_Fun)) {
+        funDeclaration();
     } else {
         statement();
     }
@@ -514,6 +530,13 @@ static void varDeclaration() {
     define_variable(global);
 }
 
+static void funDeclaration() {
+    uint8_t global = parse_variable("Expect function name");
+    mark_init();
+    function(TYPE_FUNC);
+    define_variable(global);
+}
+
 static void begin_scope() { current->scopeDepth++; }
 static void end_scope() {
     current->scopeDepth--;
@@ -524,6 +547,31 @@ static void end_scope() {
         emit_byte(OP_POP);
         current->localCount--;
     }
+}
+
+static void function(FuncType type) {
+    Compiler compiler;
+    initCompiler(&compiler, type);
+    begin_scope();
+
+    must_advance(TKN_LParen, "Expect '(' after function name");
+    if (!check(TKN_RParen)) {
+        do {
+            current->function->arity++;
+            if (current->function->arity > 255) {
+                error("Cannot have more than 255 parameters");
+            }
+
+            uint8_t constant = parse_variable("Expect parameter name");
+            define_variable(constant);
+        } while (check_advance(TKN_Comma));
+    }
+    must_advance(TKN_RParen, "Expect ')' after parameters");
+    must_advance(TKN_LBrace, "Expect '{' before function body");
+    block();
+
+    ObjFunction *func = endCompiler();
+    emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(func)));
 }
 
 static void statement() {
