@@ -109,6 +109,7 @@ static void expressionStatement();
 static void block();
 static void ifStatement();
 static void whileStatement();
+static void forStatement();
 
 static ParseRule *getRule(TokenType type);
 static void parse_precedence(Precedence prec);
@@ -505,6 +506,8 @@ static void statement() {
         printStatement();
     } else if (check_advance(TKN_While)) {
         whileStatement();
+    } else if (check_advance(TKN_For)) {
+        forStatement();
     } else if (check_advance(TKN_If)) {
         ifStatement();
     } else if (check_advance(TKN_LBrace)) {
@@ -601,6 +604,57 @@ static void whileStatement() {
 
     patch_jump(exit_jump);
     emit_byte(OP_POP);
+}
+
+static void forStatement() {
+    begin_scope();
+
+    must_advance(TKN_LParen, "Expect '(' after 'for'");
+    if (check_advance(TKN_Semicolon)) {
+        // No initializer
+    } else if (check_advance(TKN_Var)) {
+        varDeclaration();
+    } else {
+        expressionStatement();
+    }
+
+    int loopStart = current_chunk()->len;
+
+    int exit_jump = -1;
+    if (!check_advance(TKN_Semicolon)) {
+        // optional condition
+        expression();
+        must_advance(TKN_Semicolon, "Expect ';' after loop condition");
+
+        // jump out of the loop if false
+        exit_jump = emit_jump(OP_JUMP_IF_FALSE);
+        emit_byte(OP_POP);
+    }
+
+    if (!check_advance(TKN_RParen)) {
+        // optional increment
+        int body_jump = emit_jump(OP_JUMP);
+
+        int inc_expr_start = current_chunk()->len;
+        expression();
+        emit_byte(OP_POP);
+        must_advance(TKN_RParen, "Expect ')' after for clauses");
+
+        emit_loop(loopStart);
+        loopStart = inc_expr_start;
+        patch_jump(body_jump);
+    }
+
+    statement();
+
+    emit_loop(loopStart);
+
+    if (exit_jump != -1) {
+        patch_jump(exit_jump);
+        emit_byte(OP_POP);
+    }
+
+    end_scope();
 }
 
 /* if we get a parse error, we skip tokens indiscriminately
