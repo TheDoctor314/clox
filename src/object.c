@@ -80,6 +80,10 @@ ObjString *copyString(const char *chars, int len) {
 }
 
 static void print_func(ObjFunction *func) {
+    if (func->name == NULL) {
+        printf("<script>");
+        return;
+    }
     printf("<fn %s>", func->name->chars);
 }
 
