@@ -1,3 +1,4 @@
+#include "chunk.h"
 #include "stdio.h"
 #include "string.h"
 
@@ -41,6 +42,17 @@ static uint32_t hash_string(const char *key, int len) {
     return hash;
 }
 
+ObjFunction *newFunction() {
+    ObjFunction *func =
+        (ObjFunction *)allocate_object(sizeof(ObjFunction), OBJ_FUNC);
+
+    func->arity = 0;
+    func->name = NULL;
+    initChunk(func->chunk);
+
+    return func;
+}
+
 ObjString *takeString(char *chars, int len) {
     uint32_t hash = hash_string(chars, len);
     ObjString *interned = tableFindString(&vm.strings, chars, len, hash);
@@ -67,6 +79,10 @@ ObjString *copyString(const char *chars, int len) {
     return allocate_string(heap_chars, len, hash);
 }
 
+static void print_func(ObjFunction *func) {
+    printf("<fn %s>", func->name->chars);
+}
+
 void printObject(Value val) {
     switch (OBJ_TYPE(val)) {
     case OBJ_STRING: {
@@ -74,5 +90,8 @@ void printObject(Value val) {
         printf("%s", str->chars);
         break;
     }
+    case OBJ_FUNC:
+        print_func(AS_FUNC(val));
+        break;
     }
 }
