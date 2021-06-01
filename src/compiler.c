@@ -121,6 +121,7 @@ static void block();
 static void ifStatement();
 static void whileStatement();
 static void forStatement();
+static void returnStatement();
 
 static void function(FuncType type);
 
@@ -599,6 +600,8 @@ static void function(FuncType type) {
 static void statement() {
     if (check_advance(TKN_Print)) {
         printStatement();
+    } else if (check_advance(TKN_Return)) {
+        returnStatement();
     } else if (check_advance(TKN_While)) {
         whileStatement();
     } else if (check_advance(TKN_For)) {
@@ -750,6 +753,17 @@ static void forStatement() {
     }
 
     end_scope();
+}
+
+static void returnStatement() {
+    if (check_advance(TKN_Semicolon)) {
+        emit_byte(OP_NIL);
+        emit_byte(OP_RETURN);
+    } else {
+        expression();
+        must_advance(TKN_Semicolon, "Expect ';' after return value");
+        emit_byte(OP_RETURN);
+    }
 }
 
 /* if we get a parse error, we skip tokens indiscriminately
