@@ -307,6 +307,13 @@ static bool call_value(Value callee, int arg_count) {
         switch (OBJ_TYPE(callee)) {
         case OBJ_FUNC:
             return call(AS_FUNC(callee), arg_count);
+        case OBJ_NATIVE: {
+            NativeFn native = AS_NATIVE(callee);
+            Value ret = native(arg_count, vm.stackTop - arg_count);
+            vm.stackTop -= (arg_count + 1);
+            push(ret);
+            return true;
+        }
         default:
             break; // do nothing; non-callable
         }
