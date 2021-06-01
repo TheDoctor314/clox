@@ -756,6 +756,9 @@ static void forStatement() {
 }
 
 static void returnStatement() {
+    if (current->type == TYPE_SCRIPT) {
+        error("Cannot return from top-level code");
+    }
     if (check_advance(TKN_Semicolon)) {
         emit_byte(OP_NIL);
         emit_byte(OP_RETURN);
