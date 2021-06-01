@@ -30,6 +30,20 @@ static void runtime_err(const char *msg, ...) {
     va_end(args);
 
     log_error("[line %d] - %s", line, buf);
+
+    for (int i = vm.frameCount - 1; i >= 0; i--) {
+        CallFrame *frame = &vm.frames[i];
+        ObjFunction *func = frame->function;
+        size_t inst = frame->ip - func->chunk.code - 1;
+        fprintf(stderr, "[line %d] in ", func->chunk.lines[inst]);
+        if (func->name == NULL) {
+            fputs("script\n", stderr);
+        } else {
+            fprintf(stderr, "%s()\n", func->name->chars);
+        }
+    }
+
+    reset_stack();
 }
 
 void initVM() {
