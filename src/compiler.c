@@ -168,6 +168,7 @@ static void initCompiler(Compiler *c, FuncType type) {
 }
 
 static ObjFunction *endCompiler() {
+    emit_byte(OP_NIL);
     emit_byte(OP_RETURN);
     ObjFunction *func = current->function;
 
