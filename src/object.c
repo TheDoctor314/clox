@@ -53,6 +53,15 @@ ObjFunction *newFunction() {
     return func;
 }
 
+ObjNativeFunc *newNative(NativeFn func) {
+    ObjNativeFunc *native =
+        (ObjNativeFunc *)allocate_object(sizeof(ObjNativeFunc), OBJ_NATIVE);
+
+    native->func = func;
+
+    return native;
+}
+
 ObjString *takeString(char *chars, int len) {
     uint32_t hash = hash_string(chars, len);
     ObjString *interned = tableFindString(&vm.strings, chars, len, hash);
@@ -97,5 +106,7 @@ void printObject(Value val) {
     case OBJ_FUNC:
         print_func(AS_FUNC(val));
         break;
+    case OBJ_NATIVE:
+        fputs("<native fn>", stdout);
     }
 }

@@ -33,7 +33,11 @@ static void free_object(Obj *object) {
         ObjFunction *func = (ObjFunction *)object;
         freeChunk(&func->chunk);
         FREE(ObjFunction, object);
+        break;
     }
+    case OBJ_NATIVE:
+        FREE(ObjNativeFunc, object);
+        break;
     }
 }
 void freeObjects() {
