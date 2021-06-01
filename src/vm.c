@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "chunk.h"
 #include "compiler.h"
@@ -46,11 +47,25 @@ static void runtime_err(const char *msg, ...) {
     reset_stack();
 }
 
+static void define_native(const char *name, NativeFn func) {
+    push(OBJ_VAL(copyString(name, (int)strlen(name))));
+    push(OBJ_VAL(newNative(func)));
+
+    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+
+    pop();
+    pop();
+}
+
+static Value clockNative(int arg_count, Value *args);
+
 void initVM() {
     reset_stack();
     vm.objects = NULL;
     initTable(&vm.strings);
     initTable(&vm.globals);
+
+    define_native("clock", clockNative);
 }
 void freeVM() {
     freeObjects();
@@ -321,4 +336,8 @@ static bool call_value(Value callee, int arg_count) {
 
     runtime_err("Can only call functions and classes");
     return false;
+}
+
+static Value clockNative(int arg_count, Value *args) {
+    return NUMBER_VAL(((double)clock() / CLOCKS_PER_SEC));
 }
