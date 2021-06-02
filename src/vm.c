@@ -21,8 +21,9 @@ static void reset_stack() {
 
 static void runtime_err(const char *msg, ...) {
     CallFrame *frame = &vm.frames[vm.frameCount - 1];
-    size_t inst = frame->ip - frame->function->chunk.code - 1;
-    int line = frame->function->chunk.lines[inst];
+    ObjFunction *function = frame->closure->func;
+    size_t inst = frame->ip - function->chunk.code - 1;
+    int line = function->chunk.lines[inst];
 
     char buf[1024] = {0};
     va_list args;
@@ -34,7 +35,7 @@ static void runtime_err(const char *msg, ...) {
 
     for (int i = vm.frameCount - 1; i >= 0; i--) {
         CallFrame *frame = &vm.frames[i];
-        ObjFunction *func = frame->function;
+        ObjFunction *func = frame->closure->func;
         size_t inst = frame->ip - func->chunk.code - 1;
         fprintf(stderr, "[line %d] in ", func->chunk.lines[inst]);
         if (func->name == NULL) {
@@ -74,7 +75,7 @@ void freeVM() {
 }
 
 static inline Value peek(int dist) { return vm.stackTop[-dist - 1]; }
-static bool call(ObjFunction *func, int arg_count);
+static bool call(ObjClosure *closure, int arg_count);
 static bool call_value(Value callee, int arg_count);
 static void concatenate();
 
@@ -83,7 +84,8 @@ static void concatenate();
 #define READ_SHORT()                                                           \
     (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 
-#define READ_CONSTANT() (frame->function->chunk.constants.values[READ_BYTE()])
+#define READ_CONSTANT()                                                        \
+    (frame->closure->func->chunk.constants.values[READ_BYTE()])
 
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 
@@ -111,8 +113,9 @@ static InterpretResult run() {
             printf(" ]");
         }
         printf("\n");
-        disassembleInstruction(&frame->function->chunk,
-                               (int)(frame->ip - frame->function->chunk.code));
+        disassembleInstruction(
+            &frame->closure->func->chunk,
+            (int)(frame->ip - frame->closure->func->chunk.code));
 #endif
 
         switch (inst = READ_BYTE()) {
@@ -240,6 +243,12 @@ static InterpretResult run() {
             frame = &vm.frames[vm.frameCount - 1];
             break;
         }
+        case OP_CLOSURE: {
+            ObjFunction *func = AS_FUNC(READ_CONSTANT());
+            ObjClosure *closure = newClosure(func);
+            push(OBJ_VAL(closure));
+            break;
+        }
         case OP_RETURN: {
             Value ret = pop();
             vm.frameCount--;
@@ -269,7 +278,10 @@ InterpretResult interpret(const char *src) {
         return INTERPRET_COMPILE_ERR;
 
     push(OBJ_VAL(func));
-    call(func, 0);
+    ObjClosure *closure = newClosure(func);
+    pop();
+    push(OBJ_VAL(closure));
+    call(closure, 0);
 
     return run();
 }
@@ -298,9 +310,10 @@ static void concatenate() {
     push(OBJ_VAL(ret));
 }
 
-static bool call(ObjFunction *func, int arg_count) {
-    if (arg_count != func->arity) {
-        runtime_err("Expected %d arguments, got %d", func->arity, arg_count);
+static bool call(ObjClosure *closure, int arg_count) {
+    if (arg_count != closure->func->arity) {
+        runtime_err("Expected %d arguments, got %d", closure->func->arity,
+                    arg_count);
         return false;
     }
 
@@ -310,8 +323,8 @@ static bool call(ObjFunction *func, int arg_count) {
     }
 
     CallFrame *frame = &vm.frames[vm.frameCount++];
-    frame->function = func;
-    frame->ip = func->chunk.code;
+    frame->closure = closure;
+    frame->ip = closure->func->chunk.code;
     frame->slots = vm.stackTop - arg_count - 1;
 
     return true;
@@ -320,8 +333,8 @@ static bool call(ObjFunction *func, int arg_count) {
 static bool call_value(Value callee, int arg_count) {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
-        case OBJ_FUNC:
-            return call(AS_FUNC(callee), arg_count);
+        case OBJ_CLOSURE:
+            return call(AS_CLOSURE(callee), arg_count);
         case OBJ_NATIVE: {
             NativeFn native = AS_NATIVE(callee);
             Value ret = native(arg_count, vm.stackTop - arg_count);
@@ -338,6 +351,7 @@ static bool call_value(Value callee, int arg_count) {
     return false;
 }
 
-static Value clockNative(int arg_count __attribute__((unused)), Value *args __attribute__((unused))) {
+static Value clockNative(int arg_count __attribute__((unused)),
+                         Value *args __attribute__((unused))) {
     return NUMBER_VAL(((double)clock() / CLOCKS_PER_SEC));
 }
