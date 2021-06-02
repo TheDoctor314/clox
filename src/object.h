@@ -5,19 +5,22 @@
 #include "common.h"
 #include "value.h"
 
-#define OBJ_TYPE(value)   (AS_OBJ(value)->type)
-#define IS_STRING(object) is_obj_type(object, OBJ_STRING)
-#define IS_FUNC(object)   is_obj_type(object, OBJ_FUNC)
-#define IS_NATIVE(object) is_obj_type(object, OBJ_NATIVE)
+#define OBJ_TYPE(value)    (AS_OBJ(value)->type)
+#define IS_STRING(object)  is_obj_type(object, OBJ_STRING)
+#define IS_FUNC(object)    is_obj_type(object, OBJ_FUNC)
+#define IS_CLOSURE(object) is_obj_type(object, OBJ_CLOSURE)
+#define IS_NATIVE(object)  is_obj_type(object, OBJ_NATIVE)
 
 #define AS_STRING(value)  ((ObjString *)AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString *)AS_OBJ(value))->chars)
 #define AS_FUNC(value)    ((ObjFunction *)AS_OBJ(value))
+#define AS_CLOSURE(value) ((ObjClosure *)AS_OBJ(value))
 #define AS_NATIVE(value)  (((ObjNativeFunc *)AS_OBJ(value))->func)
 
 typedef enum {
     OBJ_STRING,
     OBJ_FUNC,
+    OBJ_CLOSURE,
     OBJ_NATIVE,
 } ObjType;
 
@@ -40,6 +43,11 @@ typedef struct {
     ObjString *name;
 } ObjFunction;
 
+typedef struct {
+    Obj obj;
+    ObjFunction *func;
+} ObjClosure;
+
 typedef Value (*NativeFn)(int arg_count, Value *args);
 
 typedef struct {
@@ -52,6 +60,7 @@ static inline bool is_obj_type(Value val, ObjType type) {
 }
 
 ObjFunction *newFunction();
+ObjClosure *newClosure(ObjFunction *func);
 ObjNativeFunc *newNative(NativeFn func);
 
 ObjString *takeString(char *chars, int len);

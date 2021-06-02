@@ -53,6 +53,14 @@ ObjFunction *newFunction() {
     return func;
 }
 
+ObjClosure *newClosure(ObjFunction *func) {
+    ObjClosure *closure =
+        (ObjClosure *)allocate_object(sizeof(ObjClosure), OBJ_CLOSURE);
+
+    closure->func = func;
+    return closure;
+}
+
 ObjNativeFunc *newNative(NativeFn func) {
     ObjNativeFunc *native =
         (ObjNativeFunc *)allocate_object(sizeof(ObjNativeFunc), OBJ_NATIVE);
@@ -105,6 +113,9 @@ void printObject(Value val) {
     }
     case OBJ_FUNC:
         print_func(AS_FUNC(val));
+        break;
+    case OBJ_CLOSURE:
+        print_func(AS_CLOSURE(val)->func);
         break;
     case OBJ_NATIVE:
         fputs("<native fn>", stdout);
