@@ -295,17 +295,17 @@ static inline void emit_constant(Value val) {
     emit_bytes(OP_CONSTANT, make_constant(val));
 }
 
-static void number(bool canAssign) {
+static void number(bool canAssign __attribute__((unused))) {
     double val = strtod(parser.previous.start, NULL);
     emit_constant(NUMBER_VAL(val));
 }
 
-static void grouping(bool canAssign) {
+static void grouping(bool canAssign __attribute__((unused))) {
     expression();
     must_advance(TKN_RParen, "Expect ')' after expression");
 }
 
-static void unary(bool canAssign) {
+static void unary(bool canAssign __attribute__((unused))) {
     TokenType op_type = parser.previous.type;
 
     // Compile the operand
@@ -324,7 +324,7 @@ static void unary(bool canAssign) {
     }
 }
 
-static void binary(bool canAssign) {
+static void binary(bool canAssign __attribute__((unused))) {
     TokenType op_type = parser.previous.type;
     ParseRule *rule = getRule(op_type);
     parse_precedence((Precedence)(rule->precedence + 1));
@@ -365,7 +365,7 @@ static void binary(bool canAssign) {
     }
 }
 
-static void literal(bool canAssign) {
+static void literal(bool canAssign __attribute__((unused))) {
     switch (parser.previous.type) {
     case TKN_False:
         emit_byte(OP_FALSE);
@@ -381,13 +381,13 @@ static void literal(bool canAssign) {
     }
 }
 
-static void string(bool canAssign) {
+static void string(bool canAssign __attribute__((unused))) {
     // trim the quotation marks
     emit_constant(OBJ_VAL(
         copyString(parser.previous.start + 1, parser.previous.len - 2)));
 }
 
-static void logical_and(bool canAssign) {
+static void logical_and(bool canAssign __attribute__((unused))) {
     int end_jump = emit_jump(OP_JUMP_IF_FALSE);
 
     emit_byte(OP_POP);
@@ -395,7 +395,7 @@ static void logical_and(bool canAssign) {
 
     patch_jump(end_jump);
 }
-static void logical_or(bool canAssign) {
+static void logical_or(bool canAssign __attribute__((unused))) {
     int else_jump = emit_jump(OP_JUMP_IF_FALSE);
     int end_jump = emit_jump(OP_JUMP);
 
@@ -421,7 +421,7 @@ static uint8_t arg_list() {
     must_advance(TKN_RParen, "Expect ')' after arguments");
     return arg_count;
 }
-static void call(bool canAssign) {
+static void call(bool canAssign __attribute__((unused))) {
     uint8_t arg_count = arg_list();
     emit_bytes(OP_CALL, arg_count);
 }

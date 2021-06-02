@@ -338,6 +338,6 @@ static bool call_value(Value callee, int arg_count) {
     return false;
 }
 
-static Value clockNative(int arg_count, Value *args) {
+static Value clockNative(int arg_count __attribute__((unused)), Value *args __attribute__((unused))) {
     return NUMBER_VAL(((double)clock() / CLOCKS_PER_SEC));
 }
