@@ -469,6 +469,9 @@ static void named_variable(Token name, bool canAssign) {
     if (arg != -1) {
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
+    } else if ((arg = resolve_upvalue(current, &name)) != -1) {
+        getOp = OP_GET_UPVALUE;
+        setOp = OP_SET_UPVALUE;
     } else {
         arg = identifier_constant(&name);
         getOp = OP_GET_GLOBAL;
@@ -602,6 +605,11 @@ static void function(FuncType type) {
 
     ObjFunction *func = endCompiler();
     emit_bytes(OP_CLOSURE, make_constant(OBJ_VAL(func)));
+
+    for (int i = 0; i < func->upvalueCount; i++) {
+        emit_byte(compiler.upvalues[i].isLocal ? 1 : 0);
+        emit_byte(compiler.upvalues[i].index);
+    }
 }
 
 static void statement() {
