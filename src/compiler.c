@@ -48,6 +48,11 @@ typedef struct {
     int depth;
 } Local;
 
+typedef struct {
+    uint8_t index;
+    bool isLocal;
+} Upvalue;
+
 typedef enum {
     TYPE_FUNC,
     TYPE_SCRIPT,
@@ -59,6 +64,7 @@ typedef struct Compiler {
     FuncType type;
 
     Local locals[UINT8_MAX + 1];
+    Upvalue upvalues[UINT8_MAX + 1];
     int localCount;
     int scopeDepth;
 } Compiler;
@@ -96,6 +102,7 @@ static int emit_jump(uint8_t inst);
 static void patch_jump(int offset);
 
 static int resolve_local(Compiler *compiler, Token *name);
+static int resolve_upvalue(Compiler *compiler, Token *name);
 
 // token parsing functions
 static void expression();
@@ -806,6 +813,47 @@ static int resolve_local(Compiler *compiler, Token *name) {
             }
             return i;
         }
+    }
+
+    return -1;
+}
+
+static int add_upvalue(Compiler *compiler, uint8_t index, bool isLocal) {
+    int upvalue_count = compiler->function->upvalueCount;
+
+    for (int i = 0; i < upvalue_count; i++) {
+        Upvalue *upvalue = &compiler->upvalues[i];
+
+        if (upvalue->index == index && upvalue->isLocal == isLocal) {
+            return i;
+        }
+    }
+
+    if (upvalue_count == UINT8_MAX + 1) {
+        error("Too many closure variables in function");
+        return 0;
+    }
+
+    compiler->upvalues[upvalue_count].index = index;
+    compiler->upvalues[upvalue_count].isLocal = isLocal;
+
+    return compiler->function->upvalueCount++;
+}
+
+static int resolve_upvalue(Compiler *compiler, Token *name) {
+    if (compiler->enclosing == NULL) {
+        // outermost function; not found
+        return -1;
+    }
+
+    int local = resolve_local(compiler->enclosing, name);
+    if (local != -1) {
+        return add_upvalue(compiler, (uint8_t)local, true);
+    }
+
+    int upvalue = resolve_upvalue(compiler->enclosing, name);
+    if (upvalue != -1) {
+        return add_upvalue(compiler, upvalue, false);
     }
 
     return -1;
