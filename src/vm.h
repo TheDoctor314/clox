@@ -23,7 +23,8 @@ typedef struct {
     Value *stackTop;
     Table globals;
     Table strings;
-    Obj *objects; // head of linked list
+    ObjUpvalue *openUpvalues; // tracking open upvalues
+    Obj *objects;             // linked list of all objects
 } VM;
 
 typedef enum {
