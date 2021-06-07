@@ -39,6 +39,9 @@ static void free_object(Obj *object) {
         FREE(ObjClosure, object);
         break;
     }
+    case OBJ_UPVALUE:
+        FREE(ObjUpvalue, object);
+        break;
     case OBJ_NATIVE:
         FREE(ObjNativeFunc, object);
         break;

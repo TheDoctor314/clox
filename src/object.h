@@ -21,6 +21,7 @@ typedef enum {
     OBJ_STRING,
     OBJ_FUNC,
     OBJ_CLOSURE,
+    OBJ_UPVALUE,
     OBJ_NATIVE,
 } ObjType;
 
@@ -49,6 +50,11 @@ typedef struct {
     ObjFunction *func;
 } ObjClosure;
 
+typedef struct {
+    Obj obj;
+    Value *location;
+} ObjUpvalue;
+
 typedef Value (*NativeFn)(int arg_count, Value *args);
 
 typedef struct {
@@ -62,6 +68,8 @@ static inline bool is_obj_type(Value val, ObjType type) {
 
 ObjFunction *newFunction();
 ObjClosure *newClosure(ObjFunction *func);
+
+ObjUpvalue *newUpvalue(Value *slot);
 ObjNativeFunc *newNative(NativeFn func);
 
 ObjString *takeString(char *chars, int len);
