@@ -166,6 +166,16 @@ static InterpretResult run() {
             }
             break;
         }
+        case OP_GET_UPVALUE: {
+            uint8_t slot = READ_BYTE();
+            push(*frame->closure->upvalues[slot]->location);
+            break;
+        }
+        case OP_SET_UPVALUE: {
+            uint8_t slot = READ_BYTE();
+            *frame->closure->upvalues[slot]->location = peek(0);
+            break;
+        }
         case OP_DEFINE_GLOBAL: {
             ObjString *name = READ_STRING();
             tableSet(&vm.globals, name, peek(0));
