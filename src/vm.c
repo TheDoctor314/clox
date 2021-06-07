@@ -77,6 +77,7 @@ void freeVM() {
 static inline Value peek(int dist) { return vm.stackTop[-dist - 1]; }
 static bool call(ObjClosure *closure, int arg_count);
 static bool call_value(Value callee, int arg_count);
+static ObjUpvalue *capture_upvalue(Value *local);
 static void concatenate();
 
 #define READ_BYTE() (*frame->ip++)
@@ -247,6 +248,18 @@ static InterpretResult run() {
             ObjFunction *func = AS_FUNC(READ_CONSTANT());
             ObjClosure *closure = newClosure(func);
             push(OBJ_VAL(closure));
+
+            for (int i = 0; i < closure->upvalueCount; i++) {
+                uint8_t isLocal = READ_BYTE();
+                uint8_t index = READ_BYTE();
+
+                if (isLocal) {
+                    closure->upvalues[i] =
+                        capture_upvalue(frame->slots + index);
+                } else {
+                    closure->upvalues[i] = frame->closure->upvalues[index];
+                }
+            }
             break;
         }
         case OP_RETURN: {
@@ -349,6 +362,11 @@ static bool call_value(Value callee, int arg_count) {
 
     runtime_err("Can only call functions and classes");
     return false;
+}
+
+static ObjUpvalue *capture_upvalue(Value *local) {
+    ObjUpvalue *upvalue = newUpvalue(local);
+    return upvalue;
 }
 
 static Value clockNative(int arg_count __attribute__((unused)),
