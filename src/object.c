@@ -47,6 +47,7 @@ ObjFunction *newFunction() {
         (ObjFunction *)allocate_object(sizeof(ObjFunction), OBJ_FUNC);
 
     func->arity = 0;
+    func->upvalueCount = 0;
     func->name = NULL;
     initChunk(&func->chunk);
 
