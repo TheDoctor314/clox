@@ -47,13 +47,15 @@ typedef struct {
 
 typedef struct {
     Obj obj;
-    ObjFunction *func;
-} ObjClosure;
+    Value *location;
+} ObjUpvalue;
 
 typedef struct {
     Obj obj;
-    Value *location;
-} ObjUpvalue;
+    ObjFunction *func;
+    ObjUpvalue **upvalues;
+    int upvalueCount;
+} ObjClosure;
 
 typedef Value (*NativeFn)(int arg_count, Value *args);
 

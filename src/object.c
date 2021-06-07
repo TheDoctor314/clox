@@ -54,10 +54,20 @@ ObjFunction *newFunction() {
 }
 
 ObjClosure *newClosure(ObjFunction *func) {
+    ObjUpvalue **upvalues = (ObjUpvalue **)mem_reallocate(
+        NULL, 0, func->upvalueCount * sizeof(ObjUpvalue *));
+
+    for (int i = 0; i < func->upvalueCount; i++) {
+        upvalues[i] = NULL;
+    }
+
     ObjClosure *closure =
         (ObjClosure *)allocate_object(sizeof(ObjClosure), OBJ_CLOSURE);
 
     closure->func = func;
+    closure->upvalues = upvalues;
+    closure->upvalueCount = func->upvalueCount;
+
     return closure;
 }
 
