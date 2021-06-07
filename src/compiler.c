@@ -46,6 +46,7 @@ typedef struct {
 typedef struct {
     Token name;
     int depth;
+    bool isCaptured;
 } Local;
 
 typedef struct {
@@ -171,6 +172,7 @@ static void initCompiler(Compiler *c, FuncType type) {
 
     Local *local = &current->locals[current->localCount++];
     local->depth = 0;
+    local->isCaptured = false;
     local->name.start = "";
     local->name.len = 0;
 }
@@ -445,6 +447,7 @@ static void add_local(Token name) {
     Local *local = &current->locals[current->localCount++];
     local->name = name;
     local->depth = -1; // sentinel for uninitialized state
+    local->isCaptured = false;
 }
 static void declare_variable() {
     if (current->scopeDepth == 0)
@@ -577,7 +580,11 @@ static void end_scope() {
     while (current->localCount > 0 &&
            current->locals[current->localCount - 1].depth >
                current->scopeDepth) {
-        emit_byte(OP_POP);
+        if (current->locals[current->localCount - 1].isCaptured) {
+            emit_byte(OP_CLOSE_UPVALUE);
+        } else {
+            emit_byte(OP_POP);
+        }
         current->localCount--;
     }
 }
@@ -856,6 +863,7 @@ static int resolve_upvalue(Compiler *compiler, Token *name) {
 
     int local = resolve_local(compiler->enclosing, name);
     if (local != -1) {
+        compiler->enclosing->locals[local].isCaptured = true;
         return add_upvalue(compiler, (uint8_t)local, true);
     }
 
