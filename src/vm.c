@@ -17,6 +17,7 @@ VM vm;
 static void reset_stack() {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
+    vm.openUpvalues = NULL;
 }
 
 static void runtime_err(const char *msg, ...) {
@@ -78,6 +79,7 @@ static inline Value peek(int dist) { return vm.stackTop[-dist - 1]; }
 static bool call(ObjClosure *closure, int arg_count);
 static bool call_value(Value callee, int arg_count);
 static ObjUpvalue *capture_upvalue(Value *local);
+static void close_upvalues(Value *last);
 static void concatenate();
 
 #define READ_BYTE() (*frame->ip++)
@@ -272,8 +274,13 @@ static InterpretResult run() {
             }
             break;
         }
+        case OP_CLOSE_UPVALUE:
+            close_upvalues(vm.stackTop - 1);
+            pop();
+            break;
         case OP_RETURN: {
             Value ret = pop();
+            close_upvalues(frame->slots);
             vm.frameCount--;
             if (vm.frameCount == 0) {
                 pop(); // pop the main function
@@ -375,8 +382,37 @@ static bool call_value(Value callee, int arg_count) {
 }
 
 static ObjUpvalue *capture_upvalue(Value *local) {
-    ObjUpvalue *upvalue = newUpvalue(local);
-    return upvalue;
+    // we look for a previously created upvalue referring to the same local
+    ObjUpvalue *prev = NULL;
+    ObjUpvalue *upvalue = vm.openUpvalues;
+    while (upvalue != NULL && upvalue->location > local) {
+        prev = upvalue;
+        upvalue = upvalue->next;
+    }
+
+    if (upvalue != NULL && upvalue->location == local) {
+        return upvalue;
+    }
+
+    ObjUpvalue *created_upval = newUpvalue(local);
+    created_upval->next = upvalue;
+
+    if (prev == NULL) {
+        vm.openUpvalues = created_upval;
+    } else {
+        prev->next = created_upval;
+    }
+
+    return created_upval;
+}
+
+static void close_upvalues(Value *last) {
+    while (vm.openUpvalues != NULL && vm.openUpvalues->location >= last) {
+        ObjUpvalue *upvalue = vm.openUpvalues;
+        upvalue->closed = *upvalue->location;
+        upvalue->location = &upvalue->closed;
+        vm.openUpvalues = upvalue->next;
+    }
 }
 
 static Value clockNative(int arg_count __attribute__((unused)),
