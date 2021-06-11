@@ -84,6 +84,14 @@ ObjString *tableFindString(Table *table, const char *chars, int len,
     }
 }
 
+void mark_table(Table *table) {
+    for (size_t i = 0; i < table->capacity; i++) {
+        Entry *entry = &table->entries[i];
+        mark_object((Obj *)entry->key);
+        mark_value(entry->value);
+    }
+}
+
 // table copy function
 void tableAddAll(Table *src, Table *dest) {
     for (size_t i = 0; src->capacity; i++) {

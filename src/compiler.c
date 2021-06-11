@@ -7,6 +7,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "log.h"
+#include "memory.h"
 #include "object.h"
 #include "scanner.h"
 
@@ -154,6 +155,14 @@ ObjFunction *compile(const char *src) {
 
     ObjFunction *func = endCompiler();
     return parser.hadErr ? NULL : func;
+}
+
+void mark_compiler_roots() {
+    Compiler *compiler = current;
+    while (compiler != NULL) {
+        mark_object((Obj *)compiler->function);
+        compiler = compiler->enclosing;
+    }
 }
 
 static void initCompiler(Compiler *c, FuncType type) {
