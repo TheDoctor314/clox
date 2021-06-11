@@ -25,4 +25,6 @@ void tableAddAll(Table *src, Table *dest);
 ObjString *tableFindString(Table *table, const char *chars, int len,
                            uint32_t hash);
 
+void mark_table(Table *table);
+
 #endif

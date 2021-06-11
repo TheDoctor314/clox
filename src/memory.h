@@ -2,6 +2,7 @@
 #define CLOX_MEMORY_H
 
 #include "common.h"
+#include "value.h"
 
 #define GROW_CAPACITY(cap) ((cap) < 8 ? 8 : (cap)*2)
 

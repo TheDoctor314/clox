@@ -72,3 +72,50 @@ void freeObjects() {
         obj = next;
     }
 }
+
+void mark_object(Obj *obj) {
+    if (obj == NULL)
+        return;
+
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "%p mark ", (void *)obj);
+    printValue(OBJ_VAL(obj));
+    printf("\n");
+#endif
+
+    obj->marked = true;
+}
+void mark_value(Value value) {
+    if (IS_OBJ(value))
+        mark_object(AS_OBJ(value));
+}
+
+void mark_roots() {
+    for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
+        mark_value(*slot);
+    }
+
+    for (int i = 0; i < vm.frameCount; i++) {
+        mark_object((Obj *)vm.frames[i].closure);
+    }
+
+    for (ObjUpvalue *upvalue = vm.openUpvalues; upvalue != NULL;
+         upvalue = upvalue->next) {
+        mark_object((Obj *)upvalue);
+    }
+
+    mark_table(&vm.globals);
+    mark_compiler_roots();
+}
+
+void collectGarbage() {
+#ifdef DEBUG_LOG_GC
+    log_info("-- gc begin\n");
+#endif
+
+    mark_roots();
+
+#ifdef DEBUG_LOG_GC
+    log_info("-- gc end\n");
+#endif
+}
