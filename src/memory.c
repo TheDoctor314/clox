@@ -6,7 +6,18 @@
 #include "object.h"
 #include "vm.h"
 
+#ifdef DEBUG_LOG_GC
+#include "debug.h"
+#include "log.h"
+#endif
+
 void *mem_reallocate(void *ptr, size_t old_size, size_t new_size) {
+    if (new_size > old_size) {
+#ifdef DEBUG_LOG_GC
+        collectGarbage();
+#endif
+    }
+
     if (new_size == 0) {
         free(ptr);
         return NULL;
@@ -22,6 +33,10 @@ void *mem_reallocate(void *ptr, size_t old_size, size_t new_size) {
 }
 
 static void free_object(Obj *object) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "%p free type  %d\n", (void *)object, object->type);
+#endif
+
     switch (object->type) {
     case OBJ_STRING: {
         ObjString *str = (ObjString *)object;

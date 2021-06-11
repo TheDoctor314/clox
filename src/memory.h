@@ -17,4 +17,8 @@
 void *mem_reallocate(void *pointer, size_t old_size, size_t new_size);
 void freeObjects();
 
+void mark_object(Obj *obj);
+void mark_value(Value value);
+void collectGarbage();
+
 #endif

@@ -1,7 +1,7 @@
-#include "chunk.h"
-#include "stdio.h"
-#include "string.h"
+#include <stdio.h>
+#include <string.h>
 
+#include "chunk.h"
 #include "memory.h"
 #include "object.h"
 #include "table.h"
@@ -13,6 +13,11 @@ static Obj *allocate_object(size_t size, ObjType type) {
 
     obj->next = vm.objects;
     vm.objects = obj;
+
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "%p allocate %zu bytes for type %d\n", (void *)obj, size,
+            type);
+#endif
 
     return obj;
 }
