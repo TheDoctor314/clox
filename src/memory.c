@@ -5,6 +5,7 @@
 #include "compiler.h"
 #include "memory.h"
 #include "object.h"
+#include "table.h"
 #include "vm.h"
 
 #ifdef DEBUG_LOG_GC
@@ -87,6 +88,7 @@ void collectGarbage() {
 
     mark_roots();
     trace_references();
+    table_remove_white(&vm.strings);
     sweep();
 
 #ifdef DEBUG_LOG_GC
