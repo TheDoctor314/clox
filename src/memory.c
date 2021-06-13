@@ -78,6 +78,7 @@ void freeObjects() {
 
 static void mark_roots();
 static void trace_references();
+static void sweep();
 
 void collectGarbage() {
 #ifdef DEBUG_LOG_GC
@@ -86,6 +87,7 @@ void collectGarbage() {
 
     mark_roots();
     trace_references();
+    sweep();
 
 #ifdef DEBUG_LOG_GC
     log_info("-- gc end\n");
@@ -181,5 +183,30 @@ static void trace_references() {
     while (vm.grayCount > 0) {
         Obj *obj = vm.grayStack[--vm.grayCount];
         blacken_object(obj);
+    }
+}
+
+static void sweep() {
+    // walk the objects list freeing the white objects
+    Obj *prev = NULL;
+    Obj *obj = vm.objects;
+
+    while (obj != NULL) {
+        if (obj->marked) {
+            obj->marked = false;
+            prev = obj;
+            obj = obj->next;
+        } else {
+            Obj *unreached = obj;
+            obj = obj->next;
+
+            if (prev != NULL) {
+                prev->next = obj;
+            } else {
+                vm.objects = obj;
+            }
+
+            free_object(unreached);
+        }
     }
 }
