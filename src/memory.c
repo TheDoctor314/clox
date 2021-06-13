@@ -76,8 +76,26 @@ void freeObjects() {
     free(vm.grayStack);
 }
 
+static void mark_roots();
+static void trace_references();
+
+void collectGarbage() {
+#ifdef DEBUG_LOG_GC
+    log_info("-- gc begin\n");
+#endif
+
+    mark_roots();
+    trace_references();
+
+#ifdef DEBUG_LOG_GC
+    log_info("-- gc end\n");
+#endif
+}
+
 void mark_object(Obj *obj) {
     if (obj == NULL)
+        return;
+    if (obj->marked)
         return;
 
 #ifdef DEBUG_LOG_GC
@@ -104,7 +122,44 @@ void mark_value(Value value) {
         mark_object(AS_OBJ(value));
 }
 
-void mark_roots() {
+static void mark_array(ValueArray *arr) {
+    for (size_t i = 0; i < arr->len; i++) {
+        mark_value(arr->values[i]);
+    }
+}
+static void blacken_object(Obj *obj) {
+#ifdef DEBUG_LOG_GC
+    fprintf(stderr, "%p blacken ", (void *)obj);
+    printValue(OBJ_VAL(obj));
+    printf("\n");
+#endif
+
+    switch (obj->type) {
+    case OBJ_STRING:
+    case OBJ_NATIVE:
+        break;
+    case OBJ_UPVALUE:
+        mark_value(((ObjUpvalue *)obj)->closed);
+        break;
+    case OBJ_FUNC: {
+        ObjFunction *func = (ObjFunction *)obj;
+        mark_object((Obj *)func->name);
+        mark_array(&func->chunk.constants);
+        break;
+    }
+    case OBJ_CLOSURE: {
+        ObjClosure *closure = (ObjClosure *)obj;
+        mark_object((Obj *)closure->func);
+
+        for (int i = 0; i < closure->upvalueCount; i++) {
+            mark_object((Obj *)closure->upvalues[i]);
+        }
+        break;
+    }
+    }
+}
+
+static void mark_roots() {
     for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
         mark_value(*slot);
     }
@@ -122,14 +177,9 @@ void mark_roots() {
     mark_compiler_roots();
 }
 
-void collectGarbage() {
-#ifdef DEBUG_LOG_GC
-    log_info("-- gc begin\n");
-#endif
-
-    mark_roots();
-
-#ifdef DEBUG_LOG_GC
-    log_info("-- gc end\n");
-#endif
+static void trace_references() {
+    while (vm.grayCount > 0) {
+        Obj *obj = vm.grayStack[--vm.grayCount];
+        blacken_object(obj);
+    }
 }
