@@ -86,6 +86,15 @@ ObjClass *newClass(ObjString *name) {
     return klass;
 }
 
+ObjInstance *newInstance(ObjClass *klass) {
+    ObjInstance *inst =
+        (ObjInstance *)allocate_object(sizeof(ObjInstance), OBJ_INSTANCE);
+    inst->klass = klass;
+    initTable(&inst->fields);
+
+    return inst;
+}
+
 ObjUpvalue *newUpvalue(Value *slot) {
     ObjUpvalue *upvalue =
         (ObjUpvalue *)allocate_object(sizeof(ObjUpvalue), OBJ_UPVALUE);
@@ -160,6 +169,9 @@ void printObject(Value val) {
         break;
     case OBJ_CLASS:
         printf("%s", AS_CLASS(val)->name->chars);
+        break;
+    case OBJ_INSTANCE:
+        printf("%s instance", AS_INSTANCE(val)->klass->name->chars);
         break;
     }
 }

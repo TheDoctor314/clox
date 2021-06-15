@@ -3,21 +3,24 @@
 
 #include "chunk.h"
 #include "common.h"
+#include "table.h"
 #include "value.h"
 
-#define OBJ_TYPE(value)    (AS_OBJ(value)->type)
-#define IS_STRING(object)  is_obj_type(object, OBJ_STRING)
-#define IS_FUNC(object)    is_obj_type(object, OBJ_FUNC)
-#define IS_CLOSURE(object) is_obj_type(object, OBJ_CLOSURE)
-#define IS_NATIVE(object)  is_obj_type(object, OBJ_NATIVE)
-#define IS_CLASS(object)   is_obj_type(object, OBJ_CLASS)
+#define OBJ_TYPE(value)     (AS_OBJ(value)->type)
+#define IS_STRING(object)   is_obj_type(object, OBJ_STRING)
+#define IS_FUNC(object)     is_obj_type(object, OBJ_FUNC)
+#define IS_CLOSURE(object)  is_obj_type(object, OBJ_CLOSURE)
+#define IS_NATIVE(object)   is_obj_type(object, OBJ_NATIVE)
+#define IS_CLASS(object)    is_obj_type(object, OBJ_CLASS)
+#define IS_INSTANCE(object) is_obj_type(object, OBJ_INSTANCE)
 
-#define AS_STRING(value)  ((ObjString *)AS_OBJ(value))
-#define AS_CSTRING(value) (((ObjString *)AS_OBJ(value))->chars)
-#define AS_FUNC(value)    ((ObjFunction *)AS_OBJ(value))
-#define AS_CLOSURE(value) ((ObjClosure *)AS_OBJ(value))
-#define AS_NATIVE(value)  (((ObjNativeFunc *)AS_OBJ(value))->func)
-#define AS_CLASS(value)   ((ObjClass *)AS_OBJ(value))
+#define AS_STRING(value)   ((ObjString *)AS_OBJ(value))
+#define AS_CSTRING(value)  (((ObjString *)AS_OBJ(value))->chars)
+#define AS_FUNC(value)     ((ObjFunction *)AS_OBJ(value))
+#define AS_CLOSURE(value)  ((ObjClosure *)AS_OBJ(value))
+#define AS_NATIVE(value)   (((ObjNativeFunc *)AS_OBJ(value))->func)
+#define AS_CLASS(value)    ((ObjClass *)AS_OBJ(value))
+#define AS_INSTANCE(value) ((ObjInstance *)AS_OBJ(value))
 
 typedef enum {
     OBJ_STRING,
@@ -26,6 +29,7 @@ typedef enum {
     OBJ_UPVALUE,
     OBJ_NATIVE,
     OBJ_CLASS,
+    OBJ_INSTANCE,
 } ObjType;
 
 struct Obj {
@@ -68,6 +72,12 @@ typedef struct {
     ObjString *name;
 } ObjClass;
 
+typedef struct {
+    Obj obj;
+    ObjClass *klass;
+    Table fields;
+} ObjInstance;
+
 typedef Value (*NativeFn)(int arg_count, Value *args);
 
 typedef struct {
@@ -82,6 +92,7 @@ static inline bool is_obj_type(Value val, ObjType type) {
 ObjFunction *newFunction();
 ObjClosure *newClosure(ObjFunction *func);
 ObjClass *newClass(ObjString *name);
+ObjInstance *newInstance(ObjClass *klass);
 
 ObjUpvalue *newUpvalue(Value *slot);
 ObjNativeFunc *newNative(NativeFn func);
