@@ -31,7 +31,9 @@ static ObjString *allocate_string(char *chars, int len, uint32_t hash) {
     str->hash = hash;
 
     // We intern all strings to deduplicate them
+    push(OBJ_VAL(str));
     tableSet(&vm.strings, str, NIL_VAL); // using a hash set
+    pop();
 
     return str;
 }
