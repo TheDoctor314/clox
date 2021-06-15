@@ -5,11 +5,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-//#define DEBUG_TRACE_EXEC
-//#define DEBUG_PRINT_CODE
+#ifndef NDEBUG
+#define DEBUG_TRACE_EXEC
+#define DEBUG_PRINT_CODE
 
 // This flags allows the GC to run as often as possible
 //#define DEBUG_STRESS_GC
 //#define DEBUG_LOG_GC
+
+#endif
 
 #endif
