@@ -123,6 +123,7 @@ static void call(bool);
 static void declaration();
 static void varDeclaration();
 static void funDeclaration();
+static void classDeclaration();
 static void statement();
 static void printStatement();
 static void expressionStatement();
@@ -245,7 +246,7 @@ static void error_at(Token *token, const char *msg) {
     parser.panicMode = true;
     char buf[MAX_LEN];
     if (token->type != TKN_Err) {
-        snprintf(buf, MAX_LEN, "[Line %d] at '%.*s': %s", token->line,
+        snprintf(buf, MAX_LEN, "[Line %d] at '%.*s': %s\n", token->line,
                  token->len, token->start, msg);
     }
 
@@ -552,6 +553,8 @@ static void define_variable(uint8_t global) {
 static void declaration() {
     if (check_advance(TKN_Var)) {
         varDeclaration();
+    } else if (check_advance(TKN_Class)) {
+        classDeclaration();
     } else if (check_advance(TKN_Fun)) {
         funDeclaration();
     } else {
@@ -580,6 +583,18 @@ static void funDeclaration() {
     mark_init();
     function(TYPE_FUNC);
     define_variable(global);
+}
+
+static void classDeclaration() {
+    must_advance(TKN_Ident, "Expect class name");
+    uint8_t nameConstant = identifier_constant(&parser.previous);
+    declare_variable();
+
+    emit_bytes(OP_CLASS, nameConstant);
+    define_variable(nameConstant);
+
+    must_advance(TKN_LBrace, "Expect '{' before class body");
+    must_advance(TKN_RBrace, "Expect '}' after class body");
 }
 
 static void begin_scope() { current->scopeDepth++; }
