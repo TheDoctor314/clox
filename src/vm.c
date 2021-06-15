@@ -32,7 +32,7 @@ static void runtime_err(const char *msg, ...) {
     vsnprintf(buf, 1024, msg, args);
     va_end(args);
 
-    log_error("[line %d] - %s", line, buf);
+    log_error("[line %d] - %s\n", line, buf);
 
     for (int i = vm.frameCount - 1; i >= 0; i--) {
         CallFrame *frame = &vm.frames[i];
@@ -283,6 +283,9 @@ static InterpretResult run() {
         case OP_CLOSE_UPVALUE:
             close_upvalues(vm.stackTop - 1);
             pop();
+            break;
+        case OP_CLASS:
+            push(OBJ_VAL(newClass(READ_STRING())));
             break;
         case OP_RETURN: {
             Value ret = pop();

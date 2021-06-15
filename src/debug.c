@@ -118,6 +118,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     }
     case OP_CLOSE_UPVALUE:
         return simpleInst("OP_CLOSE_UPVALUE", offset);
+    case OP_CLASS:
+        return constInst("OP_CLASS", chunk, offset);
     case OP_RETURN:
         return simpleInst("OP_RETURN", offset);
     default:
