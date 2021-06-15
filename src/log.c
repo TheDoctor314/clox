@@ -8,7 +8,7 @@ static void log_format(const char *tag, const char *msg, va_list args) {
     char buf[MSG_MAX_LEN];
     vsnprintf(buf, MSG_MAX_LEN, msg, args);
 
-    fprintf(stderr, "%s: %s\n", tag, buf);
+    fprintf(stdout, "%s: %s", tag, buf);
 }
 
 void log_error(const char *msg, ...) {
