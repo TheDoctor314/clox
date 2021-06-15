@@ -333,8 +333,8 @@ Value pop() {
 }
 
 static void concatenate() {
-    ObjString *b = AS_STRING(pop());
-    ObjString *a = AS_STRING(pop());
+    ObjString *b = AS_STRING(peek(0));
+    ObjString *a = AS_STRING(peek(1));
 
     int len = b->len + a->len;
     char *chars = mem_reallocate(NULL, 0, sizeof(char) * (len + 1));
@@ -343,6 +343,8 @@ static void concatenate() {
     chars[len] = '\0';
 
     ObjString *ret = takeString(chars, len);
+    pop();
+    pop();
     push(OBJ_VAL(ret));
 }
 
