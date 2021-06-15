@@ -26,6 +26,9 @@ typedef struct {
     ObjUpvalue *openUpvalues; // tracking open upvalues
     Obj *objects;             // linked list of all objects
 
+    size_t bytesAllocated;
+    size_t nextGC;
+
     // tracking all grey objects
     int grayCount;
     int grayCapacity;

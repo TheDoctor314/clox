@@ -64,6 +64,8 @@ static Value clockNative(int arg_count, Value *args);
 void initVM() {
     reset_stack();
     vm.objects = NULL;
+    vm.bytesAllocated = 0;
+    vm.nextGC = 1024 * 1024; // arbitrary
     vm.grayCount = 0;
     vm.grayCapacity = 0;
     vm.grayStack = NULL;
