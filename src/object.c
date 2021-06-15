@@ -80,6 +80,12 @@ ObjClosure *newClosure(ObjFunction *func) {
     return closure;
 }
 
+ObjClass *newClass(ObjString *name) {
+    ObjClass *klass = (ObjClass *)allocate_object(sizeof(ObjClass), OBJ_CLASS);
+    klass->name = name;
+    return klass;
+}
+
 ObjUpvalue *newUpvalue(Value *slot) {
     ObjUpvalue *upvalue =
         (ObjUpvalue *)allocate_object(sizeof(ObjUpvalue), OBJ_UPVALUE);
@@ -151,5 +157,9 @@ void printObject(Value val) {
         break;
     case OBJ_NATIVE:
         fputs("<native fn>", stdout);
+        break;
+    case OBJ_CLASS:
+        printf("%s", AS_CLASS(val)->name->chars);
+        break;
     }
 }
