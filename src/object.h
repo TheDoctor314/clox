@@ -10,12 +10,14 @@
 #define IS_FUNC(object)    is_obj_type(object, OBJ_FUNC)
 #define IS_CLOSURE(object) is_obj_type(object, OBJ_CLOSURE)
 #define IS_NATIVE(object)  is_obj_type(object, OBJ_NATIVE)
+#define IS_CLASS(object)   is_obj_type(object, OBJ_CLASS)
 
 #define AS_STRING(value)  ((ObjString *)AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString *)AS_OBJ(value))->chars)
 #define AS_FUNC(value)    ((ObjFunction *)AS_OBJ(value))
 #define AS_CLOSURE(value) ((ObjClosure *)AS_OBJ(value))
 #define AS_NATIVE(value)  (((ObjNativeFunc *)AS_OBJ(value))->func)
+#define AS_CLASS(value)   ((ObjClass *)AS_OBJ(value))
 
 typedef enum {
     OBJ_STRING,
@@ -23,6 +25,7 @@ typedef enum {
     OBJ_CLOSURE,
     OBJ_UPVALUE,
     OBJ_NATIVE,
+    OBJ_CLASS,
 } ObjType;
 
 struct Obj {
@@ -60,6 +63,11 @@ typedef struct {
     int upvalueCount;
 } ObjClosure;
 
+typedef struct {
+    Obj obj;
+    ObjString *name;
+} ObjClass;
+
 typedef Value (*NativeFn)(int arg_count, Value *args);
 
 typedef struct {
@@ -73,6 +81,7 @@ static inline bool is_obj_type(Value val, ObjType type) {
 
 ObjFunction *newFunction();
 ObjClosure *newClosure(ObjFunction *func);
+ObjClass *newClass(ObjString *name);
 
 ObjUpvalue *newUpvalue(Value *slot);
 ObjNativeFunc *newNative(NativeFn func);
