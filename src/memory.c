@@ -13,11 +13,19 @@
 #include "log.h"
 #endif
 
+#define GC_HEAP_GROW_FACTOR 2
+
 void *mem_reallocate(void *ptr, size_t old_size, size_t new_size) {
+    vm.bytesAllocated += (new_size - old_size);
+
     if (new_size > old_size) {
 #ifdef DEBUG_LOG_GC
         collectGarbage();
 #endif
+    }
+
+    if (vm.bytesAllocated > vm.nextGC) {
+        collectGarbage();
     }
 
     if (new_size == 0) {
@@ -84,6 +92,7 @@ static void sweep();
 void collectGarbage() {
 #ifdef DEBUG_LOG_GC
     log_info("-- gc begin\n");
+    size_t before = vm.bytesAllocated;
 #endif
 
     mark_roots();
@@ -91,8 +100,12 @@ void collectGarbage() {
     table_remove_white(&vm.strings);
     sweep();
 
+    vm.nextGC = vm.bytesAllocated * GC_HEAP_GROW_FACTOR;
+
 #ifdef DEBUG_LOG_GC
     log_info("-- gc end\n");
+    log_info("   collected %zu bytes ( from %zu to %zu) next at %zu\n",
+             before - vm.bytesAllocated, before, vm.bytesAllocated, vm.nextGC);
 #endif
 }
 
