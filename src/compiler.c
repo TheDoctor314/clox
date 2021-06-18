@@ -118,6 +118,7 @@ static void variable(bool);
 static void logical_and(bool);
 static void logical_or(bool);
 static void call(bool);
+static void dot(bool);
 
 // statement parsing
 static void declaration();
@@ -262,7 +263,7 @@ ParseRule rules[] = {
     [TKN_LBrace] = {NULL, NULL, PREC_NONE},
     [TKN_RBrace] = {NULL, NULL, PREC_NONE},
     [TKN_Comma] = {NULL, NULL, PREC_NONE},
-    [TKN_Dot] = {NULL, NULL, PREC_NONE},
+    [TKN_Dot] = {NULL, dot, PREC_CALL},
     [TKN_Minus] = {unary, binary, PREC_TERM},
     [TKN_Plus] = {NULL, binary, PREC_TERM},
     [TKN_Semicolon] = {NULL, NULL, PREC_NONE},
@@ -500,6 +501,19 @@ static void named_variable(Token name, bool canAssign) {
 }
 static void variable(bool canAssign) {
     named_variable(parser.previous, canAssign);
+}
+
+// parses get and set expressions on instances
+static void dot(bool canAssign) {
+    must_advance(TKN_Ident, "Expect property name after '.'");
+    uint8_t name = identifier_constant(&parser.previous);
+
+    if (canAssign && check_advance(TKN_Eq)) {
+        expression();
+        emit_bytes(OP_SET_PROPERTY, name);
+    } else {
+        emit_bytes(OP_GET_PROPERTY, name);
+    }
 }
 
 static ParseRule *getRule(TokenType type) { return &rules[type]; }
