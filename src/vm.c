@@ -184,6 +184,38 @@ static InterpretResult run() {
             *frame->closure->upvalues[slot]->location = peek(0);
             break;
         }
+        case OP_GET_PROPERTY: {
+            if (!IS_INSTANCE(peek(0))) {
+                runtime_err("Only instances have properties");
+                return INTERPRET_RUNTIME_ERR;
+            }
+
+            ObjInstance *inst = AS_INSTANCE(peek(0));
+            ObjString *name = READ_STRING();
+
+            Value val;
+            if (tableGet(&inst->fields, name, &val)) {
+                pop(); // Instance
+                push(val);
+                break;
+            }
+
+            runtime_err("Undefined property: '%s'", name->chars);
+            return INTERPRET_RUNTIME_ERR;
+        }
+        case OP_SET_PROPERTY: {
+            if (!IS_INSTANCE(peek(1))) {
+                runtime_err("Only instances have fields");
+                return INTERPRET_RUNTIME_ERR;
+            }
+
+            ObjInstance *inst = AS_INSTANCE(peek(1));
+            tableSet(&inst->fields, READ_STRING(), peek(0));
+            Value val = pop();
+            pop();
+            push(val);
+            break;
+        }
         case OP_DEFINE_GLOBAL: {
             ObjString *name = READ_STRING();
             tableSet(&vm.globals, name, peek(0));
