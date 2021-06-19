@@ -599,16 +599,31 @@ static void funDeclaration() {
     define_variable(global);
 }
 
+static void method() {
+    must_advance(TKN_Ident, "Expect method name");
+    uint8_t constant = identifier_constant(&parser.previous);
+
+    FuncType type = TYPE_FUNC;
+    function(type);
+    emit_bytes(OP_METHOD, constant);
+}
 static void classDeclaration() {
     must_advance(TKN_Ident, "Expect class name");
+    Token class_name = parser.previous;
     uint8_t nameConstant = identifier_constant(&parser.previous);
     declare_variable();
 
     emit_bytes(OP_CLASS, nameConstant);
     define_variable(nameConstant);
+    named_variable(class_name, false);
 
     must_advance(TKN_LBrace, "Expect '{' before class body");
+    while (!check(TKN_RBrace) && !check(TKN_EOF)) {
+        method();
+    }
+
     must_advance(TKN_RBrace, "Expect '}' after class body");
+    emit_byte(OP_POP);
 }
 
 static void begin_scope() { current->scopeDepth++; }
