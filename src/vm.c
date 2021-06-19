@@ -88,6 +88,7 @@ static ObjUpvalue *capture_upvalue(Value *local);
 static void close_upvalues(Value *last);
 static void concatenate();
 static void define_method(ObjString *name);
+static bool bind_method(ObjClass *klass, ObjString *name);
 
 #define READ_BYTE() (*frame->ip++)
 
@@ -201,8 +202,11 @@ static InterpretResult run() {
                 break;
             }
 
-            runtime_err("Undefined property: '%s'", name->chars);
-            return INTERPRET_RUNTIME_ERR;
+            if (!bind_method(inst->klass, name)) {
+                return INTERPRET_RUNTIME_ERR;
+            }
+
+            break;
         }
         case OP_SET_PROPERTY: {
             if (!IS_INSTANCE(peek(1))) {
@@ -472,6 +476,19 @@ static void define_method(ObjString *name) {
     ObjClass *klass = AS_CLASS(peek(1));
     tableSet(&klass->methods, name, method);
     pop();
+}
+
+static bool bind_method(ObjClass *klass, ObjString *name) {
+    Value method;
+    if (!tableGet(&klass->methods, name, &method)) {
+        runtime_err("Undefined property: '%s'", name->chars);
+        return false;
+    }
+
+    ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+    pop();
+    push(OBJ_VAL(bound));
+    return true;
 }
 
 static Value clockNative(int arg_count __attribute__((unused)),
