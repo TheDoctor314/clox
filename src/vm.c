@@ -87,6 +87,7 @@ static bool call_value(Value callee, int arg_count);
 static ObjUpvalue *capture_upvalue(Value *local);
 static void close_upvalues(Value *last);
 static void concatenate();
+static void define_method(ObjString *name);
 
 #define READ_BYTE() (*frame->ip++)
 
@@ -319,6 +320,9 @@ static InterpretResult run() {
         case OP_CLASS:
             push(OBJ_VAL(newClass(READ_STRING())));
             break;
+        case OP_METHOD:
+            define_method(READ_STRING());
+            break;
         case OP_RETURN: {
             Value ret = pop();
             close_upvalues(frame->slots);
@@ -461,6 +465,13 @@ static void close_upvalues(Value *last) {
         upvalue->location = &upvalue->closed;
         vm.openUpvalues = upvalue->next;
     }
+}
+
+static void define_method(ObjString *name) {
+    Value method = peek(0);
+    ObjClass *klass = AS_CLASS(peek(1));
+    tableSet(&klass->methods, name, method);
+    pop();
 }
 
 static Value clockNative(int arg_count __attribute__((unused)),
