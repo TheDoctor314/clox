@@ -428,6 +428,10 @@ static bool call_value(Value callee, int arg_count) {
             vm.stackTop[-arg_count - 1] = OBJ_VAL(newInstance(klass));
             return true;
         }
+        case OBJ_BOUND_METHOD: {
+            ObjBoundMethod *bound = AS_BOUND_METHOD(callee);
+            return call(bound->method, arg_count);
+        }
         default:
             break; // do nothing; non-callable
         }
