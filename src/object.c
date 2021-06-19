@@ -96,6 +96,14 @@ ObjInstance *newInstance(ObjClass *klass) {
     return inst;
 }
 
+ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
+    ObjBoundMethod *bound = (ObjBoundMethod *)allocate_object(
+        sizeof(ObjBoundMethod), OBJ_BOUND_METHOD);
+    bound->receiver = receiver;
+    bound->method = method;
+    return bound;
+}
+
 ObjUpvalue *newUpvalue(Value *slot) {
     ObjUpvalue *upvalue =
         (ObjUpvalue *)allocate_object(sizeof(ObjUpvalue), OBJ_UPVALUE);
@@ -173,6 +181,9 @@ void printObject(Value val) {
         break;
     case OBJ_INSTANCE:
         printf("%s instance", AS_INSTANCE(val)->klass->name->chars);
+        break;
+    case OBJ_BOUND_METHOD:
+        print_func(AS_BOUND_METHOD(val)->method->func);
         break;
     }
 }
