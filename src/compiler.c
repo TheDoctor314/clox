@@ -72,8 +72,13 @@ typedef struct Compiler {
     int scopeDepth;
 } Compiler;
 
+typedef struct ClassCompiler {
+    struct ClassCompiler *enclosing;
+} ClassCompiler;
+
 Parser parser;
 Compiler *current = NULL;
+ClassCompiler *current_class = NULL;
 Chunk *compiling_chunk = NULL;
 
 static Chunk *current_chunk() { return &current->function->chunk; }
@@ -510,7 +515,13 @@ static void variable(bool canAssign) {
     named_variable(parser.previous, canAssign);
 }
 
-static void this_(bool canAssign __attribute__((unused))) { variable(false); }
+static void this_(bool canAssign __attribute__((unused))) {
+    if (current_class == NULL) {
+        error("Cannot use 'this' outside of a class");
+        return;
+    }
+    variable(false);
+}
 
 // parses get and set expressions on instances
 static void dot(bool canAssign) {
@@ -624,6 +635,11 @@ static void classDeclaration() {
 
     emit_bytes(OP_CLASS, nameConstant);
     define_variable(nameConstant);
+
+    ClassCompiler class_compiler;
+    class_compiler.enclosing = current_class;
+    current_class = &class_compiler;
+
     named_variable(class_name, false);
 
     must_advance(TKN_LBrace, "Expect '{' before class body");
@@ -633,6 +649,8 @@ static void classDeclaration() {
 
     must_advance(TKN_RBrace, "Expect '}' after class body");
     emit_byte(OP_POP);
+
+    current_class = current_class->enclosing;
 }
 
 static void begin_scope() { current->scopeDepth++; }
