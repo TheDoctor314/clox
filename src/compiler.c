@@ -57,6 +57,7 @@ typedef struct {
 
 typedef enum {
     TYPE_FUNC,
+    TYPE_METHOD,
     TYPE_SCRIPT,
 } FuncType;
 
@@ -119,6 +120,7 @@ static void logical_and(bool);
 static void logical_or(bool);
 static void call(bool);
 static void dot(bool);
+static void this_(bool);
 
 // statement parsing
 static void declaration();
@@ -184,8 +186,13 @@ static void initCompiler(Compiler *c, FuncType type) {
     Local *local = &current->locals[current->localCount++];
     local->depth = 0;
     local->isCaptured = false;
-    local->name.start = "";
-    local->name.len = 0;
+    if (type != TYPE_FUNC) {
+        local->name.start = "this";
+        local->name.len = 4;
+    } else {
+        local->name.start = "";
+        local->name.len = 0;
+    }
 }
 
 static ObjFunction *endCompiler() {
@@ -292,7 +299,7 @@ ParseRule rules[] = {
     [TKN_Print] = {NULL, NULL, PREC_NONE},
     [TKN_Return] = {NULL, NULL, PREC_NONE},
     [TKN_Super] = {NULL, NULL, PREC_NONE},
-    [TKN_This] = {NULL, NULL, PREC_NONE},
+    [TKN_This] = {this_, NULL, PREC_NONE},
     [TKN_True] = {literal, NULL, PREC_NONE},
     [TKN_Var] = {NULL, NULL, PREC_NONE},
     [TKN_While] = {NULL, NULL, PREC_NONE},
@@ -503,6 +510,8 @@ static void variable(bool canAssign) {
     named_variable(parser.previous, canAssign);
 }
 
+static void this_(bool canAssign __attribute__((unused))) { variable(false); }
+
 // parses get and set expressions on instances
 static void dot(bool canAssign) {
     must_advance(TKN_Ident, "Expect property name after '.'");
@@ -603,7 +612,7 @@ static void method() {
     must_advance(TKN_Ident, "Expect method name");
     uint8_t constant = identifier_constant(&parser.previous);
 
-    FuncType type = TYPE_FUNC;
+    FuncType type = TYPE_METHOD;
     function(type);
     emit_bytes(OP_METHOD, constant);
 }
