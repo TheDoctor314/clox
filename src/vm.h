@@ -23,6 +23,7 @@ typedef struct {
     Value *stackTop;
     Table globals;
     Table strings;
+    ObjString *initString;    // = "init", name of the constructor in classes
     ObjUpvalue *openUpvalues; // tracking open upvalues
     Obj *objects;             // linked list of all objects
 

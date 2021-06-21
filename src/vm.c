@@ -73,12 +73,19 @@ void initVM() {
     initTable(&vm.strings);
     initTable(&vm.globals);
 
+    // we set it to NULL before so that the GC does not read uninitialized
+    // memory
+    vm.initString = NULL;
+    vm.initString = copyString("init", 4);
+
     define_native("clock", clockNative);
 }
 void freeVM() {
-    freeObjects();
     freeTable(&vm.strings);
     freeTable(&vm.globals);
+
+    vm.initString = NULL;
+    freeObjects();
 }
 
 static inline Value peek(int dist) { return vm.stackTop[-dist - 1]; }
@@ -426,6 +433,14 @@ static bool call_value(Value callee, int arg_count) {
         case OBJ_CLASS: {
             ObjClass *klass = AS_CLASS(callee);
             vm.stackTop[-arg_count - 1] = OBJ_VAL(newInstance(klass));
+            Value initializer;
+            if (tableGet(&klass->methods, vm.initString, &initializer)) {
+                return call(AS_CLOSURE(initializer), arg_count);
+            } else if (arg_count != 0) {
+                runtime_err("Expected 0 arguments but got %d", arg_count);
+                return false;
+            }
+
             return true;
         }
         case OBJ_BOUND_METHOD: {
