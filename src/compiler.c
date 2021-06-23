@@ -877,6 +877,10 @@ static void returnStatement() {
         emit_byte(OP_NIL);
         emit_byte(OP_RETURN);
     } else {
+        if (current->type == TYPE_INIT) {
+            error("Cannot return a value from an initializer");
+        }
+
         expression();
         must_advance(TKN_Semicolon, "Expect ';' after return value");
         emit_byte(OP_RETURN);
