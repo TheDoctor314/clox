@@ -537,6 +537,10 @@ static void dot(bool canAssign) {
     if (canAssign && check_advance(TKN_Eq)) {
         expression();
         emit_bytes(OP_SET_PROPERTY, name);
+    } else if (check_advance(TKN_LParen)) {
+        uint8_t arg_count = arg_list();
+        emit_bytes(OP_INVOKE, name);
+        emit_byte(arg_count);
     } else {
         emit_bytes(OP_GET_PROPERTY, name);
     }
