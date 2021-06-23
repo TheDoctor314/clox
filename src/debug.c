@@ -37,6 +37,15 @@ static int jumpInst(const char *name, int sign, Chunk *chunk, int offset) {
     printf("%-16s %4d -> %4d\n", name, offset, offset + 3 + sign * jump);
     return offset + 3;
 }
+static int invokeInst(const char *name, Chunk *chunk, int offset) {
+    uint8_t constant = chunk->code[offset + 1];
+    uint8_t arg_count = chunk->code[offset + 2];
+
+    printf("%-16s (%d args) %4d '", name, arg_count, constant);
+    printValue(chunk->constants.values[constant]);
+    printf("'\n");
+    return offset + 3;
+}
 
 int disassembleInstruction(Chunk *chunk, int offset) {
     printf("%04d ", offset);
@@ -126,6 +135,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
         return constInst("OP_CLASS", chunk, offset);
     case OP_METHOD:
         return constInst("OP_METHOD", chunk, offset);
+    case OP_INVOKE:
+        return invokeInst("OP_INVOKE", chunk, offset);
     case OP_RETURN:
         return simpleInst("OP_RETURN", offset);
     default:
