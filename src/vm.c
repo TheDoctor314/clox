@@ -96,6 +96,7 @@ static void close_upvalues(Value *last);
 static void concatenate();
 static void define_method(ObjString *name);
 static bool bind_method(ObjClass *klass, ObjString *name);
+static bool invoke(ObjString *name, int arg_count);
 
 #define READ_BYTE() (*frame->ip++)
 
@@ -334,6 +335,15 @@ static InterpretResult run() {
         case OP_METHOD:
             define_method(READ_STRING());
             break;
+        case OP_INVOKE: {
+            ObjString *method = READ_STRING();
+            int arg_count = READ_BYTE();
+            if (!invoke(method, arg_count)) {
+                return INTERPRET_RUNTIME_ERR;
+            }
+            frame = &vm.frames[vm.frameCount - 1];
+            break;
+        }
         case OP_RETURN: {
             Value ret = pop();
             close_upvalues(frame->slots);
@@ -509,6 +519,33 @@ static bool bind_method(ObjClass *klass, ObjString *name) {
     pop();
     push(OBJ_VAL(bound));
     return true;
+}
+
+static bool invoke_from_class(ObjClass *klass, ObjString *name, int arg_count) {
+    Value method;
+    if (!tableGet(&klass->methods, name, &method)) {
+        runtime_err("Undefined property '%s'", name->chars);
+        return false;
+    }
+
+    return call(AS_CLOSURE(method), arg_count);
+}
+static bool invoke(ObjString *name, int arg_count) {
+    Value receiver = peek(arg_count);
+    if (!IS_INSTANCE(receiver)) {
+        runtime_err("Only instances have methods");
+        return false;
+    }
+
+    ObjInstance *inst = AS_INSTANCE(receiver);
+
+    Value val;
+    if (tableGet(&inst->fields, name, &val)) {
+        vm.stackTop[-arg_count - 1] = val;
+        return call_value(val, arg_count);
+    }
+
+    return invoke_from_class(inst->klass, name, arg_count);
 }
 
 static Value clockNative(int arg_count __attribute__((unused)),
