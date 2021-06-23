@@ -58,6 +58,7 @@ typedef struct {
 typedef enum {
     TYPE_FUNC,
     TYPE_METHOD,
+    TYPE_INIT,
     TYPE_SCRIPT,
 } FuncType;
 
@@ -201,7 +202,12 @@ static void initCompiler(Compiler *c, FuncType type) {
 }
 
 static ObjFunction *endCompiler() {
-    emit_byte(OP_NIL);
+    if (current->type == TYPE_INIT) {
+        emit_bytes(OP_GET_LOCAL, 0);
+    } else {
+        emit_byte(OP_NIL);
+    }
+
     emit_byte(OP_RETURN);
     ObjFunction *func = current->function;
 
@@ -624,9 +630,15 @@ static void method() {
     uint8_t constant = identifier_constant(&parser.previous);
 
     FuncType type = TYPE_METHOD;
+    if (parser.previous.len == 4 &&
+        (memcmp(parser.previous.start, "init", 4) == 0)) {
+        type = TYPE_INIT;
+    }
+
     function(type);
     emit_bytes(OP_METHOD, constant);
 }
+
 static void classDeclaration() {
     must_advance(TKN_Ident, "Expect class name");
     Token class_name = parser.previous;
