@@ -103,7 +103,7 @@ void mark_table(Table *table) {
 
 // table copy function
 void tableAddAll(Table *src, Table *dest) {
-    for (size_t i = 0; src->capacity; i++) {
+    for (size_t i = 0; i < src->capacity; i++) {
         Entry *entry = &src->entries[i];
         if (entry->key != NULL) {
             tableSet(dest, entry->key, entry->value);
