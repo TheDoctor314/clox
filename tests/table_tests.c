@@ -1,9 +1,10 @@
+#include <stdio.h>
+#include <string.h>
+
 #include "ctest.h"
 #include "object.h"
 #include "table.h"
 #include "value.h"
-#include <stdio.h>
-#include <string.h>
 
 static int hash_string(const char *key, int len) {
     uint32_t hash = 2166136261; // FNV-offset basis
